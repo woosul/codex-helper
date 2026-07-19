@@ -220,8 +220,11 @@ Add this test to `tests/test_sources.py`:
             "reviewer",
             "verifier",
             "root plan gate",
+            "Subagent-Driven by default",
+            "inline workflow override",
             "separate worktree per developer",
-            "three cycles",
+            "three-cycle default",
+            "add, remove, reorder, or skip",
             "root agent owns commits, pushes, and final integration",
         ):
             self.assertIn(phrase, text)
@@ -253,13 +256,19 @@ description: Use for non-trivial feature implementation, ambiguous multi-file ch
 
 # Feature Delivery
 
+## Execution Strategy
+
+- Use Subagent-Driven by default when the task does not select an execution strategy.
+- The root may provide an explicit inline workflow override for one task to execute directly; add, remove, reorder, or skip roles and stages; or change the correction-loop count.
+- This is a default playbook, not an immutable state machine. System and user permission boundaries still apply.
+
 1. Restate the objective, constraints, non-goals, acceptance criteria, and unresolved questions.
 2. Spawn `planner` and, when repository discovery is needed, `scanner`. They are read-only and may run in parallel.
 3. Apply the root plan gate: reconcile evidence, verify paths and assumptions, remove unnecessary scope, and publish one approved developer assignment.
 4. Spawn one `developer` in the active checkout. Provide owned paths, excluded scope, acceptance criteria, and verification commands.
 5. For multiple developers, create and assign a separate worktree per developer before spawning them. Never allow concurrent developers to share a writable checkout.
 6. After implementation stops, spawn `reviewer` and `verifier` in parallel. Wait for both and independently validate every actionable finding.
-7. Return correct findings to `developer` as a narrower assignment. Stop after at most three cycles and report remaining evidence instead of looping indefinitely.
+7. Return correct findings to `developer` as a narrower assignment. Use a three-cycle default stop point; the root may shorten or extend it when task evidence warrants the change.
 8. Run final verification and inspect the final diff. The root agent owns commits, pushes, and final integration, subject to the user's authorization.
 
 ## Handoff Contract
@@ -274,6 +283,7 @@ Every response includes outcome, files inspected or changed, commands and eviden
 - Subagents never commit, push, approve their own work, or expand scope.
 - A shared-checkout write conflict falls back to one developer until worktree isolation exists.
 - The root rechecks subagent evidence and resolves contradictions.
+- Inline overrides do not transfer root-owned commit, push, or final-integration authority and do not permit multiple developers to write in one checkout.
 - Use a persistent app or interactive CLI task until all native subagents return.
 ```
 
@@ -294,8 +304,10 @@ Append this section to `AGENTS.md` before `Harness Independence`:
 ## Feature Delivery
 
 - Use `$feature-delivery` for non-trivial feature implementation, ambiguous multi-file changes, or an explicit multi-agent delivery request.
+- Use Subagent-Driven execution by default. The root may replace it for one task with an explicit inline workflow override that changes execution mode, roles, stage order, or loop count.
 - The root validates the plan before delegating implementation and retains user communication, commits, pushes, and final integration.
 - One developer may write in the active checkout. Multiple developers require a separate worktree and non-overlapping ownership for each developer.
+- Three cycles is the default correction stop point; the root may shorten or extend it when task evidence warrants the change.
 - Skip the workflow for typos, one-line fixes, and other trivial changes.
 ```
 
@@ -343,7 +355,7 @@ Add this test to `tests/test_sources.py`:
             with self.subTest(document=name):
                 self.assertIn("feature-delivery", text)
         guide = documents["user-guide"]
-        for phrase in ("planner", "developer", "별도 worktree", "최대 세 번"):
+        for phrase in ("planner", "developer", "기본 Subagent-Driven", "인라인 override", "별도 worktree", "기본 세 번"):
             self.assertIn(phrase, guide)
         operations = documents["operations"]
         self.assertIn("codex-harness skill disable feature-delivery", operations)
@@ -381,7 +393,7 @@ $feature-delivery
 planner/scanner → 루트 계획 검증 → developer → reviewer/verifier → 루트 통합
 ```
 
-Explain one active-checkout developer, separate worktrees for multiple developers, the three-cycle maximum, and root-owned commit/push.
+Explain default Subagent-Driven execution, the root's task-scoped inline override, one active-checkout developer, separate worktrees for multiple developers, the three-cycle default, and root-owned commit/push. State that the root may add, remove, reorder, or skip stages and change the loop count, while commit/push/final integration and multi-developer worktree ownership remain fixed.
 
 In `docs/operations.md`, add invocation, health inspection, `codex-harness skill disable feature-delivery`, `enable`, and `reset`, plus the rule that commit and push remain root-only and authorization-bound.
 
@@ -468,4 +480,3 @@ Mark completed plan steps with `[x]`, then run `git diff --check`.
 git add docs/superpowers/plans/2026-07-20-feature-delivery.md
 git commit -m "docs: record feature delivery verification"
 ```
-

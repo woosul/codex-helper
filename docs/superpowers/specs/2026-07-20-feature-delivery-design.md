@@ -1,7 +1,7 @@
 # Feature Delivery Multi-Agent Workflow Design
 
 **Date:** 2026-07-20  
-**Status:** Proposed for written-spec review  
+**Status:** Approved for implementation
 **Scope:** Add planner and developer custom agents plus one reusable feature-delivery skill.
 
 ## Context
@@ -15,6 +15,8 @@ Codex already gives the root agent orchestration responsibility. This design the
 - Add a read-only `planner` agent for requirements, assumptions, risks, dependencies, acceptance criteria, and implementation sequencing.
 - Add a workspace-writing `developer` agent for one bounded implementation assignment at a time.
 - Add an enabled-by-default `feature-delivery` skill that connects planning, implementation, review, verification, and root integration.
+- Use Subagent-Driven execution by default when the caller does not select an execution strategy.
+- Let the root replace the default stage sequence for one task with an explicit inline workflow override.
 - Preserve root ownership of user communication, scope decisions, commits, pushes, and final integration.
 - Allow one developer to edit the active checkout; require a separate Git worktree per developer before parallel write work starts.
 - Keep the workflow optional through the existing repository-default and machine-local skill activation controls.
@@ -25,6 +27,7 @@ Codex already gives the root agent orchestration responsibility. This design the
 - Do not replace Codex's root orchestration, built-in agents, or thread controls.
 - Do not add designer or test-engineer roles in this change.
 - Do not permit subagents to commit, push, approve their own work, or expand scope.
+- Do not make the suggested stage order, participating roles, execution mode, or three-cycle stop point immutable.
 - Do not force the workflow for typos, one-line fixes, or other trivial changes.
 
 ## Considered Approaches
@@ -72,9 +75,17 @@ Only one developer may write in the active checkout. Multiple developers may run
 
 `sources/skills/feature-delivery/SKILL.md` is the orchestration contract. It applies to non-trivial feature implementation, ambiguous multi-file work, or an explicit multi-agent delivery request. It excludes trivial edits where delegation would add more coordination than value.
 
+When the caller does not choose an execution strategy, the skill uses Subagent-Driven execution: a fresh bounded developer assignment is dispatched for implementation and returned to the root for validation. The root may provide an inline workflow override in the task prompt to execute directly; add, remove, reorder, or skip stages and roles; or change the correction-loop count for that task.
+
+The workflow is a default playbook, not a state machine that controls the root. Only two workflow ownership boundaries remain fixed: commits, pushes, and final integration belong to the root; and multiple developers writing in parallel require separate worktrees. System and user permission boundaries continue to apply independently of the skill.
+
 The skill is a manifest-managed asset and defaults to enabled. Existing `codex-harness skill enable`, `disable`, and `reset` commands provide the per-machine override.
 
 ## Workflow
+
+### 0. Execution strategy
+
+The root checks the task prompt for an explicit workflow override. Without one, it selects Subagent-Driven execution. An inline override may choose direct root execution; add, remove, reorder, or skip roles and stages; and shorten or extend the correction loop. The root records material deviations so the final report remains understandable.
 
 ### 1. Intake
 
@@ -98,7 +109,7 @@ After implementation stops, `reviewer` and `verifier` run in parallel as read-on
 
 ### 6. Root reconciliation
 
-The root independently validates actionable findings. Correct findings are returned to the developer as a narrower assignment. The internal implementation-review loop is capped at three cycles. If acceptance criteria still fail after the third cycle, the root reports the evidence and asks for direction rather than looping indefinitely.
+The root independently validates actionable findings. Correct findings are returned to the developer as a narrower assignment. Three cycles is the default stop point, not an immutable limit. The root may shorten or extend it when task evidence warrants the change and records that decision in its progress or final report.
 
 ### 7. Final integration
 
@@ -132,6 +143,7 @@ This keeps noisy exploration and test output out of the root context while prese
 - A developer encountering a failing baseline distinguishes pre-existing failure from introduced failure and does not claim success.
 - A reviewer or verifier finding is advisory until the root validates it.
 - Missing worktree isolation blocks parallel developers; the workflow falls back to one developer rather than sharing a checkout.
+- A task-scoped inline workflow override may change execution mode, roles, stage order, evidence steps, and loop count. It cannot transfer root-owned commit/push/final-integration authority or permit multiple developers to write in one checkout.
 - Subagents inherit the parent permission boundary, but the custom role files further narrow planner, scanner, reviewer, and verifier to read-only.
 
 ## Repository Changes
@@ -153,8 +165,9 @@ The change is accepted when:
 3. Developer instructions forbid commit, push, scope expansion, and shared-checkout parallel writes.
 4. The feature-delivery skill names planner, scanner, developer, reviewer, verifier, and root responsibilities.
 5. The skill requires a root plan gate before implementation and isolated worktrees for multiple developers.
-6. The skill caps the internal correction loop at three cycles.
-7. Manifest targets remain unique and all managed sources exist.
-8. The feature-delivery skill is enabled by default and can be toggled with the existing skill commands.
-9. Operator documentation explains when the workflow triggers, how to invoke it, and who owns mutations and integration.
-10. The full repository test suite passes, `git diff --check` is clean, and a temporary-home harness plan/apply/doctor smoke test recognizes the new assets.
+6. The skill uses three cycles as the default correction stop point and lets the root shorten or extend it per task.
+7. The skill selects Subagent-Driven execution by default and lets the root explicitly replace the execution mode, roles, stage order, and loop count inline.
+8. Manifest targets remain unique and all managed sources exist.
+9. The feature-delivery skill is enabled by default and can be toggled with the existing skill commands.
+10. Operator documentation explains when the workflow triggers, how to invoke it, how to override it inline, and who owns mutations and integration.
+11. The full repository test suite passes, `git diff --check` is clean, and a temporary-home harness plan/apply/doctor smoke test recognizes the new assets.
