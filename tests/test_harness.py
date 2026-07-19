@@ -44,7 +44,16 @@ class HarnessTests(unittest.TestCase):
     def test_inventory_filters_by_kind(self):
         result = self.run_cli("list", "--kind", "agents", "--json")
         payload = json.loads(result.stdout)
-        self.assertEqual(3, len(payload["assets"]))
+        self.assertEqual(
+            {
+                "agent-scanner",
+                "agent-planner",
+                "agent-developer",
+                "agent-reviewer",
+                "agent-verifier",
+            },
+            {item["id"] for item in payload["assets"]},
+        )
         self.assertTrue(all(item["category"] == "agents" for item in payload["assets"]))
 
     def test_status_reports_missing_without_mutating(self):
@@ -390,6 +399,32 @@ class HarnessTests(unittest.TestCase):
         self.assertEqual(1, result.returncode)
         self.assertIn("suspected secret", result.stdout)
         self.assertNotIn("super-secret-value", result.stdout)
+
+    def test_doctor_rejects_unapproved_workspace_write_agent(self):
+        checkout = self.home / "workspace-write-checkout"
+        subprocess.run(["cp", "-R", str(ROOT), str(checkout)], check=True)
+        scanner = checkout / "sources/agents/scanner.toml"
+        scanner.write_text(scanner.read_text().replace(
+            'sandbox_mode = "read-only"',
+            'sandbox_mode = "workspace-write"',
+            1,
+        ))
+        result = subprocess.run(
+            [str(checkout / "bin/codex-harness"), "doctor", "--json"],
+            cwd=checkout,
+            env=self.env,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        payload = json.loads(result.stdout)
+        agents = next(check for check in payload["checks"] if check["id"] == "agents")
+        self.assertEqual(1, result.returncode)
+        self.assertEqual("fail", agents["status"])
+        self.assertEqual(
+            "custom agents are named and use declared sandbox boundaries",
+            agents["message"],
+        )
 
     def test_operational_sources_have_no_sibling_harness_path(self):
         self.run_cli("apply", "--yes")

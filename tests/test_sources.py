@@ -128,6 +128,40 @@ class SourceContractTests(unittest.TestCase):
         self.assertEqual("$HOME/.agents/skills/feature-delivery", skill["target"])
         self.assertTrue(skill["enabled"])
 
+    def test_feature_delivery_skill_contract(self):
+        skill = ROOT / "sources/skills/feature-delivery/SKILL.md"
+        text = skill.read_text()
+        for phrase in (
+            "name: feature-delivery",
+            "planner",
+            "scanner",
+            "developer",
+            "reviewer",
+            "verifier",
+            "root plan gate",
+            "Subagent-Driven by default",
+            "inline workflow override",
+            "separate worktree per developer",
+            "three-cycle default",
+            "add, remove, reorder, or skip",
+            "The root agent owns commits, pushes, and final integration",
+            "delegating parent/root task remains persistent until every spawned subagent has returned",
+            "Start this workflow only from the coordinating root task",
+            "When dispatched as a role within an active feature-delivery workflow",
+            "do not re-enter this workflow",
+            "Return validated findings to the developer as a narrower assignment",
+        ):
+            self.assertIn(phrase, text)
+
+        metadata = (ROOT / "sources/skills/feature-delivery/agents/openai.yaml").read_text()
+        self.assertIn("Feature Delivery", metadata)
+
+        guidance = (ROOT / "AGENTS.md").read_text()
+        self.assertIn("$feature-delivery", guidance)
+        self.assertIn("non-trivial feature", guidance)
+        self.assertIn("delegated role", guidance)
+        self.assertIn("do not re-enter", guidance)
+
     def test_manifest_sources_exist(self):
         data = tomllib.loads((ROOT / "manifest.toml").read_text())
         for asset in data["assets"]:

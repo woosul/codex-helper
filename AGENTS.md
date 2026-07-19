@@ -32,6 +32,16 @@ These instructions are the personal default for Codex across repositories. More 
 - Parallelize independent read-heavy work; coordinate writes through the root agent or isolated worktrees.
 - Preserve user changes and external tool-managed state unless the user explicitly places them in scope.
 
+## Feature Delivery
+
+- Use `$feature-delivery` for non-trivial feature implementation, ambiguous multi-file changes, or explicit multi-agent delivery.
+- Start it only from the coordinating root task. As a delegated role in an active feature-delivery workflow, execute the bounded assignment directly; do not re-enter the workflow.
+- It is Subagent-Driven by default; a root task-scoped inline override can change execution mode, roles, stage order, or loop count.
+- The root validates the plan and retains user communication, commits, pushes, and final integration.
+- One developer uses the active checkout; multiple developers require separate worktrees and non-overlapping scope.
+- Three cycles are the default; the root may shorten or extend them with evidence.
+- Skip this workflow for trivial edits.
+
 ## Harness Independence
 
 - `codex-helper` is the sole source repository for the Codex harness.

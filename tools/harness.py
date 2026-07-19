@@ -1102,12 +1102,19 @@ def command_doctor(context: Context) -> tuple[dict[str, Any], int]:
     for asset in (item for item in context.assets if item.category == "agents"):
         try:
             data = tomllib.loads(asset.source.read_text())
+            expected_sandbox_mode = (
+                "workspace-write" if asset.id == "agent-developer" else "read-only"
+            )
             agents_ok = agents_ok and all(
                 data.get(key) for key in ("name", "description", "developer_instructions")
-            ) and data.get("sandbox_mode") == "read-only"
+            ) and data.get("sandbox_mode") == expected_sandbox_mode
         except (OSError, tomllib.TOMLDecodeError):
             agents_ok = False
-    add("agents", agents_ok, "custom agents are named and read-only")
+    add(
+        "agents",
+        agents_ok,
+        "custom agents are named and use declared sandbox boundaries",
+    )
 
     statuses = [
         inspect_asset(asset, effective_enabled(asset, preferences)) for asset in context.assets

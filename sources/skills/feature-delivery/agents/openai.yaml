@@ -1,0 +1,4 @@
+interface:
+  display_name: "Feature Delivery"
+  short_description: "Plan, implement, review, and verify a bounded feature"
+  default_prompt: "Use planner and optional scanner evidence, apply the root plan gate, assign a bounded developer, then run reviewer and verifier before root integration."
