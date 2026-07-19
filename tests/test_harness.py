@@ -37,7 +37,7 @@ class HarnessTests(unittest.TestCase):
     def test_plan_is_read_only_and_lists_declared_assets(self):
         result = self.run_cli("plan", "--json")
         payload = json.loads(result.stdout)
-        self.assertEqual("0.2.0", payload["harness_version"])
+        self.assertEqual("0.3.0", payload["harness_version"])
         self.assertTrue(any(item["id"] == "global-agents" for item in payload["assets"]))
         self.assertFalse(self.codex_home.exists())
 
@@ -366,7 +366,7 @@ class HarnessTests(unittest.TestCase):
             capture_output=True,
         )
         self.assertEqual(0, result.returncode, result.stderr)
-        self.assertEqual("0.2.0", json.loads(result.stdout)["harness_version"])
+        self.assertEqual("0.3.0", json.loads(result.stdout)["harness_version"])
 
     def test_doctor_passes_for_sources_and_applied_temp_home(self):
         self.run_cli("apply", "--yes")

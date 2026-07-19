@@ -1,5 +1,5 @@
 schema_version = 1
-harness_version = "0.2.0"
+harness_version = "0.3.0"
 minimum_codex_version = "0.144.5"
 
 [paths]
@@ -29,6 +29,24 @@ kind = "symlink"
 category = "agents"
 source = "sources/agents/scanner.toml"
 target = "${CODEX_HOME:-$HOME/.codex}/agents/scanner.toml"
+scope = "global"
+version = "1.0.0"
+
+[[assets]]
+id = "agent-planner"
+kind = "symlink"
+category = "agents"
+source = "sources/agents/planner.toml"
+target = "${CODEX_HOME:-$HOME/.codex}/agents/planner.toml"
+scope = "global"
+version = "1.0.0"
+
+[[assets]]
+id = "agent-developer"
+kind = "symlink"
+category = "agents"
+source = "sources/agents/developer.toml"
+target = "${CODEX_HOME:-$HOME/.codex}/agents/developer.toml"
 scope = "global"
 version = "1.0.0"
 
@@ -107,6 +125,19 @@ version = "1.0.0"
 upstream = "https://learn.chatgpt.com/docs/agent-configuration/subagents"
 license = "local-adaptation"
 last_reviewed = "2026-07-19"
+
+[[assets]]
+id = "skill-feature-delivery"
+kind = "symlink"
+category = "skills"
+enabled = true
+source = "sources/skills/feature-delivery"
+target = "$HOME/.agents/skills/feature-delivery"
+scope = "global"
+version = "1.0.0"
+upstream = "https://learn.chatgpt.com/docs/agent-configuration/subagents"
+license = "local-adaptation"
+last_reviewed = "2026-07-20"
 
 [[assets]]
 id = "skill-dual-loop-review"

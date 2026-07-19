@@ -27,6 +27,8 @@ class SourceContractTests(unittest.TestCase):
             ROOT / "sources/config/hosts/default.toml",
             ROOT / "sources/config/hosts/rock.toml",
             ROOT / "sources/agents/scanner.toml",
+            ROOT / "sources/agents/planner.toml",
+            ROOT / "sources/agents/developer.toml",
             ROOT / "sources/agents/reviewer.toml",
             ROOT / "sources/agents/verifier.toml",
             ROOT / "sources/profiles/deep-review.config.toml",
@@ -40,13 +42,49 @@ class SourceContractTests(unittest.TestCase):
         data = tomllib.loads((ROOT / "sources/config/base.toml").read_text())
         self.assertNotIn("rmcp_client", data.get("features", {}))
 
-    def test_agents_are_named_and_read_only(self):
-        for name in ("scanner", "reviewer", "verifier"):
+    def test_agents_have_declared_role_permissions(self):
+        expected_modes = {
+            "scanner": "read-only",
+            "planner": "read-only",
+            "developer": "workspace-write",
+            "reviewer": "read-only",
+            "verifier": "read-only",
+        }
+        for name, sandbox_mode in expected_modes.items():
             data = tomllib.loads((ROOT / f"sources/agents/{name}.toml").read_text())
             self.assertEqual(name, data["name"])
-            self.assertEqual("read-only", data["sandbox_mode"])
+            self.assertEqual(sandbox_mode, data["sandbox_mode"])
             self.assertTrue(data["description"])
             self.assertTrue(data["developer_instructions"])
+
+        planner = tomllib.loads((ROOT / "sources/agents/planner.toml").read_text())
+        developer = tomllib.loads((ROOT / "sources/agents/developer.toml").read_text())
+        for agent in (planner, developer):
+            self.assertEqual("gpt-5.6-sol", agent["model"])
+            self.assertEqual("high", agent["model_reasoning_effort"])
+
+        for phrase in (
+            "Do not edit files",
+            "commit",
+            "push",
+            "material ambiguity",
+            "evidence from inference",
+            "ordered steps",
+        ):
+            self.assertIn(phrase, planner["developer_instructions"])
+
+        for phrase in (
+            "approved assignment and owned paths",
+            "test-first",
+            "broaden scope",
+            "commit",
+            "push",
+            "self-approve",
+            "unrelated changes",
+            "one developer per checkout",
+            "separate worktrees",
+        ):
+            self.assertIn(phrase, developer["developer_instructions"])
 
     def test_manifest_targets_are_unique(self):
         data = tomllib.loads((ROOT / "manifest.toml").read_text())
@@ -56,11 +94,39 @@ class SourceContractTests(unittest.TestCase):
 
     def test_manifest_defines_skill_activation_contract(self):
         data = tomllib.loads((ROOT / "manifest.toml").read_text())
-        self.assertEqual("0.2.0", data["harness_version"])
+        self.assertEqual("0.3.0", data["harness_version"])
         self.assertIn("preferences", data["config"])
         for asset in data["assets"]:
             if asset["category"] == "skills":
                 self.assertIsInstance(asset.get("enabled", True), bool)
+
+    def test_feature_delivery_manifest_contract(self):
+        data = tomllib.loads((ROOT / "manifest.toml").read_text())
+        self.assertEqual("0.3.0", data["harness_version"])
+        assets = {asset["id"]: asset for asset in data["assets"]}
+
+        for asset_id, source, target in (
+            (
+                "agent-planner",
+                "sources/agents/planner.toml",
+                "${CODEX_HOME:-$HOME/.codex}/agents/planner.toml",
+            ),
+            (
+                "agent-developer",
+                "sources/agents/developer.toml",
+                "${CODEX_HOME:-$HOME/.codex}/agents/developer.toml",
+            ),
+        ):
+            asset = assets[asset_id]
+            self.assertEqual("agents", asset["category"])
+            self.assertEqual(source, asset["source"])
+            self.assertEqual(target, asset["target"])
+
+        skill = assets["skill-feature-delivery"]
+        self.assertEqual("skills", skill["category"])
+        self.assertEqual("sources/skills/feature-delivery", skill["source"])
+        self.assertEqual("$HOME/.agents/skills/feature-delivery", skill["target"])
+        self.assertTrue(skill["enabled"])
 
     def test_manifest_sources_exist(self):
         data = tomllib.loads((ROOT / "manifest.toml").read_text())
