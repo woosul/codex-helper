@@ -67,6 +67,23 @@ class SourceContractTests(unittest.TestCase):
         self.assertIn("root agent", text)
         self.assertIn("Do not delegate concurrent writes", text)
 
+    def test_operator_docs_exist_and_readme_links_them(self):
+        readme = (ROOT / "README.md").read_text()
+        for relative in (
+            "docs/architecture.md",
+            "docs/operations.md",
+            "docs/cross-machine-bootstrap.md",
+            "docs/sources.md",
+        ):
+            self.assertTrue((ROOT / relative).is_file())
+            self.assertIn(relative, readme)
+
+    def test_docs_define_safe_update_sequence(self):
+        text = (ROOT / "docs/operations.md").read_text()
+        sequence = ["git pull --ff-only", "codex-harness plan", "codex-harness apply", "codex-harness doctor"]
+        positions = [text.index(item) for item in sequence]
+        self.assertEqual(positions, sorted(positions))
+
 
 if __name__ == "__main__":
     unittest.main()
