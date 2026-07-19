@@ -36,6 +36,10 @@ class SourceContractTests(unittest.TestCase):
             with self.subTest(path=path):
                 tomllib.loads(path.read_text())
 
+    def test_base_config_uses_supported_feature_keys(self):
+        data = tomllib.loads((ROOT / "sources/config/base.toml").read_text())
+        self.assertNotIn("rmcp_client", data.get("features", {}))
+
     def test_agents_are_named_and_read_only(self):
         for name in ("scanner", "reviewer", "verifier"):
             data = tomllib.loads((ROOT / f"sources/agents/{name}.toml").read_text())
