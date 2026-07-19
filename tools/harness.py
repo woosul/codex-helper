@@ -6,12 +6,16 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 import hashlib
 import json
 import os
 import re
+import shutil
+import subprocess
 import sys
+import tempfile
 import tomllib
 from typing import Any, Mapping
 
@@ -93,6 +97,14 @@ def is_within(path: Path, root: Path) -> bool:
         return False
 
 
+def is_lexically_within(path: Path, root: Path) -> bool:
+    try:
+        Path(os.path.abspath(path)).relative_to(Path(os.path.abspath(root)))
+        return True
+    except ValueError:
+        return False
+
+
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -138,7 +150,7 @@ def load_context(
         target = Path(expand_value(item["target"], env)).expanduser()
         if not is_within(source, root) or not source.exists():
             raise ValueError(f"invalid source for {item['id']}")
-        if not any(is_within(target, allowed) for allowed in approved):
+        if not any(is_lexically_within(target, allowed) for allowed in approved):
             raise ValueError(f"target outside approved roots: {target}")
         if item["id"] in ids or target in targets:
             raise ValueError("duplicate asset id or target")
@@ -222,17 +234,22 @@ def combined_overlay(context: Context) -> str:
     return result
 
 
+def _toml_semantically_equal(left: str, right: str) -> bool:
+    return tomllib.loads(left or "") == tomllib.loads(right or "")
+
+
 def preview_config(context: Context) -> dict[str, Any]:
     live_path = context.codex_home / "config.toml"
     live_text = live_path.read_text() if live_path.exists() else ""
     state = read_state(context.state_path) if context.state_path.exists() else {"managed_paths": []}
     previous = tuple(tuple(path) for path in state.get("managed_paths", []))
     result = merge_config(live_text, combined_overlay(context), previous)
+    changes = not _toml_semantically_equal(result.text, live_text)
     return {
         "target": str(live_path),
-        "status": "current" if result.text == live_text else "drifted",
+        "status": "drifted" if changes else "current",
         "managed_paths": [list(path) for path in result.managed_paths],
-        "changes": result.text != live_text,
+        "changes": changes,
     }
 
 
@@ -303,6 +320,299 @@ def command_version(context: Context, asset_id: str | None) -> tuple[dict[str, A
     raise ValueError(f"unknown asset id: {asset_id}")
 
 
+def atomic_write(path: Path, data: bytes, mode: int = 0o600) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.chmod(name, mode)
+        os.replace(name, path)
+    finally:
+        if os.path.exists(name):
+            os.unlink(name)
+
+
+def new_snapshot_id() -> str:
+    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+
+def backup_target(target: Path, snapshot_dir: Path) -> dict[str, Any]:
+    entry: dict[str, Any] = {"target": str(target), "type": "missing"}
+    if target.is_symlink():
+        entry.update(type="symlink", link=os.readlink(target))
+    elif target.is_file():
+        relative = Path("files") / hashlib.sha256(str(target).encode()).hexdigest()
+        destination = snapshot_dir / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(target, destination)
+        entry.update(type="file", backup=str(relative), sha256=sha256(target))
+    elif target.is_dir():
+        relative = Path("dirs") / hashlib.sha256(str(target).encode()).hexdigest()
+        shutil.copytree(target, snapshot_dir / relative, symlinks=True)
+        entry.update(type="directory", backup=str(relative))
+    return entry
+
+
+def _recorded_assets(context: Context, state: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
+    records = {key: dict(value) for key, value in state.get("assets", {}).items()}
+    for asset in context.assets:
+        records[asset.id] = {
+            "source": str(asset.source),
+            "target": str(asset.target),
+            "kind": asset.kind,
+            "category": asset.category,
+            "version": asset.version,
+        }
+    return records
+
+
+def _snapshot_targets(context: Context, state: Mapping[str, Any]) -> list[Path]:
+    targets = [Path(record["target"]) for record in _recorded_assets(context, state).values()]
+    targets.extend((context.codex_home / "config.toml", context.state_path))
+    ordered: list[Path] = []
+    seen: set[Path] = set()
+    for target in targets:
+        if target not in seen:
+            seen.add(target)
+            ordered.append(target)
+    return ordered
+
+
+def create_snapshot(context: Context, state: Mapping[str, Any]) -> dict[str, Any]:
+    snapshot_id = new_snapshot_id()
+    snapshot_dir = context.backups_dir / snapshot_id
+    counter = 1
+    while snapshot_dir.exists():
+        snapshot_dir = context.backups_dir / f"{snapshot_id}-{counter}"
+        counter += 1
+    snapshot_id = snapshot_dir.name
+    snapshot_dir.mkdir(parents=True)
+    try:
+        revision = subprocess.run(
+            ["git", "-C", str(context.root), "rev-parse", "HEAD"],
+            text=True,
+            capture_output=True,
+            check=True,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        revision = "unknown"
+    receipt = {
+        "snapshot_id": snapshot_id,
+        "harness_version": context.harness_version,
+        "git_revision": revision,
+        "host_overlay": str(context.host_overlay),
+        "entries": [backup_target(target, snapshot_dir) for target in _snapshot_targets(context, state)],
+    }
+    atomic_write(
+        snapshot_dir / "receipt.json",
+        (json.dumps(receipt, indent=2, sort_keys=True) + "\n").encode(),
+    )
+    return receipt
+
+
+def _remove_existing(path: Path) -> None:
+    if path.is_symlink() or path.is_file():
+        path.unlink()
+    elif path.is_dir():
+        shutil.rmtree(path)
+
+
+def restore_receipt(context: Context, receipt: Mapping[str, Any]) -> None:
+    snapshot_dir = context.backups_dir / str(receipt["snapshot_id"])
+    for entry in reversed(receipt["entries"]):
+        target = Path(entry["target"])
+        _remove_existing(target)
+        kind = entry["type"]
+        if kind == "missing":
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if kind == "symlink":
+            target.symlink_to(entry["link"])
+        elif kind == "file":
+            shutil.copy2(snapshot_dir / entry["backup"], target)
+        elif kind == "directory":
+            shutil.copytree(snapshot_dir / entry["backup"], target, symlinks=True)
+        else:
+            raise ValueError(f"unknown snapshot entry type: {kind}")
+
+
+def atomic_symlink(source: Path, target: Path) -> None:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = target.parent / f".{target.name}.codex-helper-tmp"
+    if temporary.exists() or temporary.is_symlink():
+        temporary.unlink()
+    temporary.symlink_to(source)
+    os.replace(temporary, target)
+
+
+def apply_config(
+    context: Context,
+    previous_state: Mapping[str, Any],
+) -> tuple[str, tuple[tuple[str, ...], ...]]:
+    live_path = context.codex_home / "config.toml"
+    live_text = live_path.read_text() if live_path.exists() else ""
+    previous = tuple(tuple(path) for path in previous_state.get("managed_paths", []))
+    result = merge_config(live_text, combined_overlay(context), previous)
+    output = live_text if _toml_semantically_equal(result.text, live_text) else result.text
+    if output != live_text or not live_path.exists():
+        atomic_write(live_path, output.encode(), mode=0o600)
+    return output, result.managed_paths
+
+
+def build_state(
+    context: Context,
+    managed_paths: tuple[tuple[str, ...], ...],
+) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "harness_version": context.harness_version,
+        "host_overlay": str(context.host_overlay),
+        "managed_paths": [list(path) for path in managed_paths],
+        "assets": {
+            asset.id: {
+                "source": str(asset.source),
+                "target": str(asset.target),
+                "kind": asset.kind,
+                "category": asset.category,
+                "version": asset.version,
+            }
+            for asset in context.assets
+        },
+    }
+
+
+def _link_matches(target: Path, source: Path) -> bool:
+    if not target.is_symlink():
+        return False
+    actual = Path(os.readlink(target))
+    if not actual.is_absolute():
+        actual = target.parent / actual
+    return actual.resolve(strict=False) == source.resolve(strict=False)
+
+
+def command_snapshot(context: Context) -> tuple[dict[str, Any], int]:
+    receipt = create_snapshot(context, read_state(context.state_path))
+    return receipt, EXIT_OK
+
+
+def command_restore(
+    context: Context,
+    snapshot_id: str,
+    yes: bool,
+) -> tuple[dict[str, Any], int]:
+    if not yes:
+        return {"error": "restore requires --yes"}, EXIT_CONFLICT
+    snapshot_dir = context.backups_dir / snapshot_id
+    if not is_within(snapshot_dir, context.backups_dir):
+        raise ValueError("invalid snapshot id")
+    receipt_path = snapshot_dir / "receipt.json"
+    if not receipt_path.is_file():
+        raise ValueError(f"snapshot not found: {snapshot_id}")
+    receipt = json.loads(receipt_path.read_text())
+    restore_receipt(context, receipt)
+    return {"snapshot_id": snapshot_id, "restored": True}, EXIT_OK
+
+
+def command_apply(context: Context, yes: bool) -> tuple[dict[str, Any], int]:
+    previous_state = read_state(context.state_path)
+    current_ids = {asset.id for asset in context.assets}
+    stale = {
+        key: record
+        for key, record in previous_state.get("assets", {}).items()
+        if key not in current_ids
+    }
+    conflicts = []
+    removable_stale = []
+    for key, record in stale.items():
+        target, source = Path(record["target"]), Path(record["source"])
+        if not target.exists() and not target.is_symlink():
+            continue
+        if _link_matches(target, source):
+            removable_stale.append((key, target))
+        else:
+            conflicts.append(key)
+    statuses = [inspect_asset(asset) for asset in context.assets]
+    conflicts.extend(status.id for status in statuses if status.status == "conflict")
+    plan, _ = command_plan(context)
+    if conflicts and not yes:
+        return {**plan, "conflicts": conflicts}, EXIT_CONFLICT
+    if not plan["changes"] and not removable_stale:
+        return {**plan, "snapshot_id": None, "applied": False}, EXIT_OK
+    receipt = create_snapshot(context, previous_state)
+    fail_after = int(os.environ.get("CODEX_HELPER_FAIL_AFTER", "0"))
+    mutations = 0
+
+    def mutated() -> None:
+        nonlocal mutations
+        mutations += 1
+        if fail_after and mutations >= fail_after:
+            raise RuntimeError("injected apply failure")
+
+    try:
+        for _, target in removable_stale:
+            target.unlink()
+            mutated()
+        for asset, status in zip(context.assets, statuses):
+            if status.status == "current":
+                continue
+            if asset.target.exists() or asset.target.is_symlink():
+                _remove_existing(asset.target)
+            atomic_symlink(asset.source, asset.target)
+            mutated()
+        _, managed_paths = apply_config(context, previous_state)
+        mutated()
+        state = build_state(context, managed_paths)
+        atomic_write(
+            context.state_path,
+            (json.dumps(state, indent=2, sort_keys=True) + "\n").encode(),
+        )
+        mutated()
+    except Exception as error:
+        restore_receipt(context, receipt)
+        return {
+            "snapshot_id": receipt["snapshot_id"],
+            "rolled_back": True,
+            "error": str(error),
+        }, EXIT_ROLLED_BACK
+    return {
+        "snapshot_id": receipt["snapshot_id"],
+        "applied": True,
+        "conflicts_replaced": conflicts,
+    }, EXIT_OK
+
+
+def command_unlink(context: Context, yes: bool) -> tuple[dict[str, Any], int]:
+    if not yes:
+        return {"error": "unlink requires --yes"}, EXIT_CONFLICT
+    state = read_state(context.state_path)
+    receipt = create_snapshot(context, state)
+    conflicts: list[str] = []
+    for key, record in _recorded_assets(context, state).items():
+        target, source = Path(record["target"]), Path(record["source"])
+        if not target.exists() and not target.is_symlink():
+            continue
+        if _link_matches(target, source):
+            target.unlink()
+        else:
+            conflicts.append(key)
+    live_path = context.codex_home / "config.toml"
+    if live_path.exists():
+        live = live_path.read_text()
+        previous = tuple(tuple(path) for path in state.get("managed_paths", []))
+        cleaned = merge_config(live, "", previous).text
+        atomic_write(live_path, cleaned.encode(), mode=0o600)
+    if context.state_path.exists() or context.state_path.is_symlink():
+        context.state_path.unlink()
+    return {
+        "snapshot_id": receipt["snapshot_id"],
+        "unlinked": not conflicts,
+        "conflicts": conflicts,
+    }, EXIT_CONFLICT if conflicts else EXIT_OK
+
+
 def emit(payload: dict[str, Any], json_mode: bool) -> None:
     if json_mode:
         print(json.dumps(payload, indent=2, sort_keys=True))
@@ -328,6 +638,15 @@ def build_parser() -> argparse.ArgumentParser:
     version = sub.add_parser("version")
     version.add_argument("asset_id", nargs="?")
     version.add_argument("--json", action="store_true")
+    apply_parser = sub.add_parser("apply")
+    apply_parser.add_argument("--yes", action="store_true")
+    snapshot = sub.add_parser("snapshot")
+    snapshot.add_argument("--json", action="store_true")
+    restore = sub.add_parser("restore")
+    restore.add_argument("snapshot_id")
+    restore.add_argument("--yes", action="store_true")
+    unlink = sub.add_parser("unlink")
+    unlink.add_argument("--yes", action="store_true")
     return parser
 
 
@@ -348,9 +667,17 @@ def main(argv: list[str] | None = None) -> int:
             payload, code = command_list(context, args.kind)
         elif args.command == "version":
             payload, code = command_version(context, args.asset_id)
+        elif args.command == "apply":
+            payload, code = command_apply(context, args.yes)
+        elif args.command == "snapshot":
+            payload, code = command_snapshot(context)
+        elif args.command == "restore":
+            payload, code = command_restore(context, args.snapshot_id, args.yes)
+        elif args.command == "unlink":
+            payload, code = command_unlink(context, args.yes)
         else:
             parser.error(f"unsupported command: {args.command}")
-        emit(payload, args.json)
+        emit(payload, getattr(args, "json", False))
         return code
     except (OSError, ValueError, KeyError, json.JSONDecodeError, tomllib.TOMLDecodeError) as error:
         print(f"ERROR: {error}", file=sys.stderr)

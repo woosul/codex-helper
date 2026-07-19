@@ -64,3 +64,64 @@ class HarnessTests(unittest.TestCase):
         result = self.run_cli("--manifest", str(bad), "plan", check=False)
         self.assertEqual(2, result.returncode)
         self.assertIn("outside approved roots", result.stderr)
+
+    def test_apply_is_idempotent_and_preserves_unmanaged_entries(self):
+        self.codex_home.mkdir(parents=True)
+        live = self.codex_home / "config.toml"
+        live.write_text('[plugins.demo]\nenabled = true\n')
+        external = self.home / ".agents/skills/external"
+        external.mkdir(parents=True)
+        (external / "SKILL.md").write_text("external")
+        self.run_cli("apply", "--yes")
+        first = live.read_bytes()
+        self.run_cli("apply", "--yes")
+        self.assertEqual(first, live.read_bytes())
+        self.assertTrue((external / "SKILL.md").exists())
+        self.assertEqual((ROOT / "AGENTS.md").resolve(), (self.codex_home / "AGENTS.md").resolve())
+        plan = json.loads(self.run_cli("plan", "--json").stdout)
+        self.assertFalse(plan["changes"])
+
+    def test_apply_rolls_back_after_injected_failure(self):
+        self.codex_home.mkdir(parents=True)
+        live = self.codex_home / "config.toml"
+        live.write_text('model = "before"\n')
+        env = {**self.env, "CODEX_HELPER_FAIL_AFTER": "1"}
+        result = subprocess.run(
+            [str(CLI), "apply", "--yes"], cwd=ROOT, env=env, text=True, capture_output=True
+        )
+        self.assertEqual(4, result.returncode)
+        self.assertEqual('model = "before"\n', live.read_text())
+        self.assertFalse((self.codex_home / "AGENTS.md").exists())
+
+    def test_snapshot_restore_and_unlink_touch_only_managed_state(self):
+        self.run_cli("apply", "--yes")
+        snapshot = json.loads(self.run_cli("snapshot", "--json").stdout)["snapshot_id"]
+        agents_link = self.codex_home / "AGENTS.md"
+        agents_link.unlink()
+        self.run_cli("restore", snapshot, "--yes")
+        self.assertTrue(agents_link.is_symlink())
+        self.run_cli("unlink", "--yes")
+        self.assertFalse(agents_link.exists())
+        self.assertTrue((self.codex_home / "config.toml").exists())
+
+    def test_apply_removes_only_a_stale_previously_owned_link(self):
+        stale_source = ROOT / "AGENTS.md"
+        stale_target = self.codex_home / "agents/retired.toml"
+        stale_target.parent.mkdir(parents=True)
+        stale_target.symlink_to(stale_source)
+        state = self.codex_home / ".codex-helper/state.json"
+        state.parent.mkdir(parents=True)
+        state.write_text(json.dumps({
+            "managed_paths": [],
+            "assets": {
+                "retired-agent": {
+                    "source": str(stale_source),
+                    "target": str(stale_target),
+                    "kind": "symlink",
+                    "category": "agents",
+                    "version": "0.9.0"
+                }
+            }
+        }))
+        self.run_cli("apply", "--yes")
+        self.assertFalse(stale_target.exists())
