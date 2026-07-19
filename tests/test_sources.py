@@ -181,6 +181,10 @@ class SourceContractTests(unittest.TestCase):
 
         guidance = (ROOT / "AGENTS.md").read_text()
         self.assertIn("$feature-delivery", guidance)
+        self.assertIn("When `$feature-delivery` is available and enabled", guidance)
+        self.assertIn("If `$feature-delivery` is unavailable or disabled", guidance)
+        self.assertIn("execute or reconfigure the workflow inline", guidance)
+        self.assertIn("must not attempt to invoke the missing skill", guidance)
         self.assertIn("non-trivial feature", guidance)
         self.assertIn("delegated role", guidance)
         self.assertIn("do not re-enter", guidance)
@@ -278,6 +282,9 @@ class SourceContractTests(unittest.TestCase):
             "본문 label",
             "developer 1 - implement role badges",
             "reviewer 2 - review role quality",
+            "`feature-delivery`가 없거나 머신 로컬에서 비활성화",
+            "전역 지침은 사용할 수 없는 스킬을 요구하지 않는다",
+            "인라인 또는 루트가 선택한 다른 워크플로",
         ):
             self.assertIn(phrase, guide)
 
@@ -294,6 +301,9 @@ class SourceContractTests(unittest.TestCase):
             "client-owned",
             "full label",
             "role instance - task name",
+            "unavailable or machine-locally disabled",
+            "global guidance does not require the missing skill",
+            "continue inline or use another chosen workflow",
         ):
             self.assertIn(phrase, operations)
 

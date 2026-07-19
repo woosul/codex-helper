@@ -34,7 +34,9 @@ These instructions are the personal default for Codex across repositories. More 
 
 ## Feature Delivery
 
-- Use `$feature-delivery` for non-trivial feature implementation, ambiguous multi-file changes, or explicit multi-agent delivery.
+- When `$feature-delivery` is available and enabled, use it for non-trivial feature implementation, ambiguous multi-file changes, or explicit multi-agent delivery.
+- If `$feature-delivery` is unavailable or disabled, the coordinating root may execute or reconfigure the workflow inline or use another chosen workflow; it must not attempt to invoke the missing skill.
+- The remaining rules in this section apply only while a feature-delivery workflow is active.
 - Start it only from the coordinating root task. As a delegated role in an active feature-delivery workflow, execute the bounded assignment directly; do not re-enter the workflow.
 - It is Subagent-Driven by default; a root task-scoped inline override can change execution mode, roles, stage order, or loop count.
 - The root validates the plan and retains user communication, commits, pushes, and final integration.

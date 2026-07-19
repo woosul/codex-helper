@@ -1,6 +1,6 @@
 # Feature Delivery Multi-Agent Workflow Design
 
-**Date:** 2026-07-20  
+**Date:** 2026-07-20
 **Status:** Approved for implementation
 **Scope:** Add planner and developer custom agents plus one reusable feature-delivery skill.
 

@@ -45,7 +45,9 @@ codex-harness skill reset parallel-review
 
 ## Feature-delivery operation
 
-Invoke `$feature-delivery` from a persistent parent/root task, then check health with `codex-harness skill status feature-delivery --json` and `codex-harness doctor --json`. The parent must remain active until every delegated role returns; do not start this workflow from an ephemeral task.
+When the managed `feature-delivery` skill is available and enabled, invoke `$feature-delivery` from a persistent parent/root task, then check health with `codex-harness skill status feature-delivery --json` and `codex-harness doctor --json`. The parent must remain active until every delegated role returns; do not start this workflow from an ephemeral task.
+
+If the skill is unavailable or machine-locally disabled, global guidance does not require the missing skill. The root can continue inline or use another chosen workflow without attempting to invoke it.
 
 The root assigns and reports each `role instance - task name` label, allocates repeatable-role numbers monotonically, and reuses a number only for a same-thread follow-up. Planner, scanner, reviewer, and verifier remain read-only; the developer profile defaults to `workspace-write`, but actual edits remain bounded by the parent/user/system permission boundary. The root owns scope and integration; commits and pushes remain root responsibilities subject to user/system authorization.
 

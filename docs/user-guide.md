@@ -46,7 +46,9 @@ codex-harness doctor
 
 ### 기능 전달 워크플로
 
-비사소한 기능, 여러 파일에 걸친 모호한 변경, 또는 명시적인 다중 에이전트 전달 요청에는 `$feature-delivery`를 사용한다. 기본 흐름은 planner/scanner → root plan gate → developer → reviewer/verifier → root integration이다.
+`$feature-delivery`를 사용할 수 있고 활성화되어 있으면 비사소한 기능, 여러 파일에 걸친 모호한 변경, 또는 명시적인 다중 에이전트 전달 요청에 사용한다. 기본 흐름은 planner/scanner → root plan gate → developer → reviewer/verifier → root integration이다.
+
+`feature-delivery`가 없거나 머신 로컬에서 비활성화되어 있으면 전역 지침은 사용할 수 없는 스킬을 요구하지 않는다. 루트는 누락된 스킬을 호출하지 않고 인라인 또는 루트가 선택한 다른 워크플로로 계속할 수 있다.
 
 실행 전략을 따로 지정하지 않으면 **기본 Subagent-Driven**으로 동작한다. 루트는 작업 범위의 **인라인 override**로 실행 모드, 역할, 순서, 수정 루프를 추가·제거·재정렬·생략할 수 있다. 다만 위임된 역할은 이 워크플로에 다시 진입하지 않는다. 사소한 편집은 이 협업 비용이 더 크므로 제외한다.
 
