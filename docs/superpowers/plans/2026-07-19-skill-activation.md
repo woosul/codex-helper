@@ -283,7 +283,7 @@ git diff --check
 
 Expected: all tests pass and no whitespace errors.
 
-- [ ] **Step 2: Verify the real plan before mutation**
+- [x] **Step 2: Verify the real plan before mutation**
 
 ```bash
 codex-harness plan --json
@@ -292,7 +292,7 @@ codex-harness skill status parallel-review --json
 
 Expected: no unexpected changes and effective state enabled.
 
-- [ ] **Step 3: Smoke local disable and health**
+- [x] **Step 3: Smoke local disable and health**
 
 ```bash
 codex-harness skill disable parallel-review --json
@@ -302,7 +302,7 @@ codex-harness doctor --json
 
 Expected: skill status `disabled`, overall status exit 0, doctor healthy.
 
-- [ ] **Step 4: Reset and prove final convergence**
+- [x] **Step 4: Reset and prove final convergence**
 
 ```bash
 codex-harness skill reset parallel-review --json
@@ -312,7 +312,7 @@ codex-harness doctor --json
 
 Expected: local override absent, link current, plan changes empty, doctor healthy.
 
-- [ ] **Step 5: Commit the implementation**
+- [x] **Step 5: Commit the implementation**
 
 ```bash
 git add manifest.toml tools/harness.py tests README.md docs
