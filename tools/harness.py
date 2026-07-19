@@ -613,6 +613,36 @@ def command_unlink(context: Context, yes: bool) -> tuple[dict[str, Any], int]:
     }, EXIT_CONFLICT if conflicts else EXIT_OK
 
 
+def command_bootstrap(context: Context) -> tuple[dict[str, Any], int]:
+    directories = (
+        context.codex_home,
+        context.user_skills,
+        context.user_bin,
+        context.codex_home / "agents",
+        context.codex_home / "rules",
+    )
+    for directory in directories:
+        directory.mkdir(parents=True, exist_ok=True)
+    return {
+        "created": [str(path) for path in directories],
+        "next": f"Ensure {context.user_bin} is on PATH, apply the harness, then restart Codex.",
+    }, EXIT_OK
+
+
+def command_host_init(context: Context, name: str) -> tuple[dict[str, Any], int]:
+    if not re.fullmatch(r"[a-z0-9][a-z0-9_-]*", name):
+        raise ValueError("host name must match [a-z0-9][a-z0-9_-]*")
+    target = context.config_base.parent / "hosts" / f"{name}.toml"
+    if target.exists():
+        raise ValueError(f"host overlay already exists: {target}")
+    text = (
+        f"# Host-specific non-secret Codex settings for {name}.\n"
+        "# Keep secrets in environment variables or Codex credential storage.\n"
+    )
+    atomic_write(target, text.encode(), mode=0o644)
+    return {"host": name, "path": str(target)}, EXIT_OK
+
+
 def emit(payload: dict[str, Any], json_mode: bool) -> None:
     if json_mode:
         print(json.dumps(payload, indent=2, sort_keys=True))
@@ -647,6 +677,11 @@ def build_parser() -> argparse.ArgumentParser:
     restore.add_argument("--yes", action="store_true")
     unlink = sub.add_parser("unlink")
     unlink.add_argument("--yes", action="store_true")
+    sub.add_parser("bootstrap")
+    host_parser = sub.add_parser("host")
+    host_sub = host_parser.add_subparsers(dest="host_command", required=True)
+    host_init = host_sub.add_parser("init")
+    host_init.add_argument("name")
     return parser
 
 
@@ -675,6 +710,10 @@ def main(argv: list[str] | None = None) -> int:
             payload, code = command_restore(context, args.snapshot_id, args.yes)
         elif args.command == "unlink":
             payload, code = command_unlink(context, args.yes)
+        elif args.command == "bootstrap":
+            payload, code = command_bootstrap(context)
+        elif args.command == "host" and args.host_command == "init":
+            payload, code = command_host_init(context, args.name)
         else:
             parser.error(f"unsupported command: {args.command}")
         emit(payload, getattr(args, "json", False))

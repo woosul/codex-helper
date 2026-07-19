@@ -75,3 +75,21 @@ source = "sources/rules/codex-helper.rules"
 target = "${CODEX_HOME:-$HOME/.codex}/rules/codex-helper.rules"
 scope = "global"
 version = "1.0.0"
+
+[[assets]]
+id = "utility-codex-harness"
+kind = "utility"
+category = "utilities"
+source = "bin/codex-harness"
+target = "$HOME/.local/bin/codex-harness"
+scope = "global"
+version = "1.0.0"
+
+[[assets]]
+id = "utility-external-review"
+kind = "utility"
+category = "utilities"
+source = "bin/codex-external-review"
+target = "$HOME/.local/bin/codex-external-review"
+scope = "global"
+version = "1.0.0"

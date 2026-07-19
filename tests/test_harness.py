@@ -125,3 +125,24 @@ class HarnessTests(unittest.TestCase):
         }))
         self.run_cli("apply", "--yes")
         self.assertFalse(stale_target.exists())
+
+    def test_bootstrap_creates_only_parent_directories(self):
+        self.run_cli("bootstrap")
+        self.assertTrue(self.codex_home.is_dir())
+        self.assertTrue((self.home / ".agents/skills").is_dir())
+        self.assertTrue((self.home / ".local/bin").is_dir())
+        self.assertFalse((self.codex_home / "AGENTS.md").exists())
+
+    def test_host_init_creates_non_secret_skeleton(self):
+        checkout = self.home / "checkout"
+        subprocess.run(["cp", "-R", str(ROOT), str(checkout)], check=True)
+        cli = checkout / "bin/codex-harness"
+        subprocess.run([str(cli), "host", "init", "gems"], cwd=checkout, env=self.env, check=True)
+        text = (checkout / "sources/config/hosts/gems.toml").read_text()
+        self.assertIn("Host-specific non-secret", text)
+        self.assertNotRegex(text.lower(), r"token|password|bearer")
+
+    def test_utilities_are_manifest_managed(self):
+        self.run_cli("apply", "--yes")
+        self.assertEqual(ROOT / "bin/codex-harness", (self.home / ".local/bin/codex-harness").resolve())
+        self.assertEqual(ROOT / "bin/codex-external-review", (self.home / ".local/bin/codex-external-review").resolve())
