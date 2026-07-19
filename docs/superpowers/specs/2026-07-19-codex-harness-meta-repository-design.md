@@ -1,7 +1,8 @@
 # Codex Harness Meta Repository Design
 
 **Date:** 2026-07-19  
-**Status:** Approved direction; revision pending review
+**Status:** Approved design
+
 **Scope:** Personal, cross-machine Codex CLI and desktop harness management
 
 ## 1. Intent
