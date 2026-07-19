@@ -14,6 +14,9 @@
 
 - Create `sources/agents/planner.toml`: read-only planning role and response contract.
 - Create `sources/agents/developer.toml`: bounded workspace-write implementation role.
+- Modify `sources/agents/scanner.toml`: add a readable singleton nickname.
+- Modify `sources/agents/reviewer.toml`: add readable numbered reviewer nicknames.
+- Modify `sources/agents/verifier.toml`: add readable numbered verifier nicknames.
 - Create `sources/skills/feature-delivery/SKILL.md`: orchestration stages, handoffs, write isolation, and correction bound.
 - Create `sources/skills/feature-delivery/agents/openai.yaml`: user-facing skill metadata and default prompt.
 - Modify `manifest.toml`: register the two agents and togglable skill; bump harness version.
@@ -262,13 +265,18 @@ description: Use for non-trivial feature implementation, ambiguous multi-file ch
 - The root may provide an explicit inline workflow override for one task to execute directly; add, remove, reorder, or skip roles and stages; or change the correction-loop count.
 - This is a default playbook, not an immutable state machine. System and user permission boundaries still apply.
 
+## Entry Guard
+
+- Start this workflow only from the coordinating root task.
+- When dispatched as a role within an active feature-delivery workflow, execute the bounded assignment directly; do not re-enter this workflow.
+
 1. Restate the objective, constraints, non-goals, acceptance criteria, and unresolved questions.
 2. Spawn `planner` and, when repository discovery is needed, `scanner`. They are read-only and may run in parallel.
 3. Apply the root plan gate: reconcile evidence, verify paths and assumptions, remove unnecessary scope, and publish one approved developer assignment.
 4. Spawn one `developer` in the active checkout. Provide owned paths, excluded scope, acceptance criteria, and verification commands.
 5. For multiple developers, create and assign a separate worktree per developer before spawning them. Never allow concurrent developers to share a writable checkout.
 6. After implementation stops, spawn `reviewer` and `verifier` in parallel. Wait for both and independently validate every actionable finding.
-7. Return correct findings to `developer` as a narrower assignment. Use a three-cycle default stop point; the root may shorten or extend it when task evidence warrants the change.
+7. Return validated findings to the developer as a narrower assignment, then rerun reviewer and verifier checks. Use a three-cycle default stop point; the root may shorten or extend it when task evidence warrants the change.
 8. Run final verification and inspect the final diff. The root agent owns commits, pushes, and final integration, subject to the user's authorization.
 
 ## Handoff Contract
@@ -284,7 +292,7 @@ Every response includes outcome, files inspected or changed, commands and eviden
 - A shared-checkout write conflict falls back to one developer until worktree isolation exists.
 - The root rechecks subagent evidence and resolves contradictions.
 - Inline overrides do not transfer root-owned commit, push, or final-integration authority and do not permit multiple developers to write in one checkout.
-- Use a persistent app or interactive CLI task until all native subagents return.
+- Keep the delegating parent/root task persistent until every spawned subagent has returned.
 ```
 
 Create `sources/skills/feature-delivery/agents/openai.yaml`:
@@ -305,6 +313,7 @@ Append this section to `AGENTS.md` before `Harness Independence`:
 
 - Use `$feature-delivery` for non-trivial feature implementation, ambiguous multi-file changes, or an explicit multi-agent delivery request.
 - Use Subagent-Driven execution by default. The root may replace it for one task with an explicit inline workflow override that changes execution mode, roles, stage order, or loop count.
+- When dispatched as a role inside an active feature-delivery workflow, execute the assigned role directly and do not re-enter `$feature-delivery`.
 - The root validates the plan before delegating implementation and retains user communication, commits, pushes, and final integration.
 - One developer may write in the active checkout. Multiple developers require a separate worktree and non-overlapping ownership for each developer.
 - Three cycles is the default correction stop point; the root may shorten or extend it when task evidence warrants the change.
@@ -328,7 +337,84 @@ git add tests/test_sources.py sources/skills/feature-delivery AGENTS.md
 git commit -m "feat: add feature delivery workflow"
 ```
 
-### Task 3: Document operation and activation
+### Task 3: Add visible subagent role badges
+
+**Files:**
+- Modify: `tests/test_sources.py`
+- Modify: `sources/agents/scanner.toml`
+- Modify: `sources/agents/planner.toml`
+- Modify: `sources/agents/developer.toml`
+- Modify: `sources/agents/reviewer.toml`
+- Modify: `sources/agents/verifier.toml`
+- Modify: `sources/skills/feature-delivery/SKILL.md`
+- Modify: `AGENTS.md`
+
+- [ ] **Step 1: Write the failing visibility contract test**
+
+Extend the agent role test to require non-empty unique `nickname_candidates` for every managed agent. Require singleton `Planner` and `Scanner` names and numbered `Developer 1`, `Reviewer 1`, and `Verifier 1` names.
+
+Extend `test_feature_delivery_skill_contract` with these exact portable display contracts:
+
+```python
+        for phrase in (
+            "subagent : [planner]",
+            "subagent : [scanner]",
+            "subagent : [developer#1]",
+            "subagent : [reviewer#1]",
+            "subagent : [verifier#1]",
+            "developer_1__",
+            "dispatch, progress, and completion",
+        ):
+            self.assertIn(phrase, text)
+```
+
+- [ ] **Step 2: Run the focused tests and verify RED**
+
+Run:
+
+```bash
+uv run python -m unittest tests.test_sources.SourceContractTests.test_agents_have_declared_role_permissions tests.test_sources.SourceContractTests.test_feature_delivery_skill_contract -v
+```
+
+Expected: FAIL because nickname candidates and the visibility contract are absent.
+
+- [ ] **Step 3: Add nickname candidates and the portable badge contract**
+
+Add nickname candidates to the five agent TOML files:
+
+```toml
+nickname_candidates = ["Scanner"]
+nickname_candidates = ["Planner"]
+nickname_candidates = ["Developer 1", "Developer 2", "Developer 3"]
+nickname_candidates = ["Reviewer 1", "Reviewer 2", "Reviewer 3"]
+nickname_candidates = ["Verifier 1", "Verifier 2", "Verifier 3"]
+```
+
+Place the matching line in each role file; do not combine them into one file.
+
+Add a `Visibility Contract` section to the feature-delivery skill. Require the root to emit `subagent : [planner]` and `subagent : [scanner]` for singleton roles and one-based `subagent : [developer#1]`, `subagent : [reviewer#1]`, and `subagent : [verifier#1]` badges for repeatable roles. Keep the same badge on dispatch, progress, and completion updates. Require tool-compatible task IDs such as `developer_1__feature` when `#` is not accepted.
+
+Add a concise `AGENTS.md` rule requiring the portable role badge on every subagent dispatch and status summary.
+
+- [ ] **Step 4: Run the source and harness tests and verify GREEN**
+
+Run:
+
+```bash
+uv run python -m unittest tests.test_sources tests.test_harness -v
+git diff --check
+```
+
+Expected: PASS with all role names and badge strings covered.
+
+- [ ] **Step 5: Commit the visibility layer**
+
+```bash
+git add tests/test_sources.py sources/agents sources/skills/feature-delivery/SKILL.md AGENTS.md
+git commit -m "feat: expose subagent role badges"
+```
+
+### Task 4: Document operation and activation
 
 **Files:**
 - Modify: `tests/test_sources.py`
@@ -416,7 +502,7 @@ git add tests/test_sources.py README.md docs/architecture.md docs/user-guide.md 
 git commit -m "docs: document feature delivery operation"
 ```
 
-### Task 4: Verify harness convergence and finish the branch
+### Task 5: Verify harness convergence and finish the branch
 
 **Files:**
 - Modify: `docs/superpowers/plans/2026-07-20-feature-delivery.md`

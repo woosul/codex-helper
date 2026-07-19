@@ -17,6 +17,7 @@ Codex already gives the root agent orchestration responsibility. This design the
 - Add an enabled-by-default `feature-delivery` skill that connects planning, implementation, review, verification, and root integration.
 - Use Subagent-Driven execution by default when the caller does not select an execution strategy.
 - Let the root replace the default stage sequence for one task with an explicit inline workflow override.
+- Make the active role visible in every dispatch, progress update, and completion summary with stable `subagent : [role]` badges.
 - Preserve root ownership of user communication, scope decisions, commits, pushes, and final integration.
 - Allow one developer to edit the active checkout; require a separate Git worktree per developer before parallel write work starts.
 - Keep the workflow optional through the existing repository-default and machine-local skill activation controls.
@@ -81,6 +82,12 @@ The workflow is a default playbook, not a state machine that controls the root. 
 
 The skill is a manifest-managed asset and defaults to enabled. Existing `codex-harness skill enable`, `disable`, and `reset` commands provide the per-machine override.
 
+### Role visibility
+
+The root emits a stable textual badge before each dispatch and keeps it on progress and completion summaries. Singleton roles use `subagent : [planner]` and `subagent : [scanner]`. Repeatable roles use one-based instance numbers such as `subagent : [developer#1]`, `subagent : [developer#2]`, `subagent : [reviewer#1]`, and `subagent : [verifier#1]`.
+
+Internal task identifiers use tool-compatible role prefixes such as `developer_1__checkout` because task IDs may not accept brackets or `#`. Custom agent `nickname_candidates` expose readable role names in Codex clients where nickname display is supported. Textual badges remain the portable contract when the client UI does not render a distinct native badge.
+
 ## Workflow
 
 ### 0. Execution strategy
@@ -134,6 +141,8 @@ Every agent response includes:
 - unresolved risks, uncertainty, or blockers;
 - no raw logs unless the root explicitly requests them.
 
+The root prefixes dispatch, progress, and completion updates with the same role badge so the user can map each result back to the active subagent instance.
+
 This keeps noisy exploration and test output out of the root context while preserving enough evidence for independent checking.
 
 ## Failure and Safety Behavior
@@ -149,6 +158,7 @@ This keeps noisy exploration and test output out of the root context while prese
 ## Repository Changes
 
 - Add `sources/agents/planner.toml` and `sources/agents/developer.toml`.
+- Add role-visible nickname candidates to scanner, planner, developer, reviewer, and verifier.
 - Add `sources/skills/feature-delivery/SKILL.md` and its skill metadata.
 - Register both agents and the skill in `manifest.toml`.
 - Bump the harness minor version from `0.2.0` to `0.3.0`.
@@ -170,4 +180,6 @@ The change is accepted when:
 8. Manifest targets remain unique and all managed sources exist.
 9. The feature-delivery skill is enabled by default and can be toggled with the existing skill commands.
 10. Operator documentation explains when the workflow triggers, how to invoke it, how to override it inline, and who owns mutations and integration.
-11. The full repository test suite passes, `git diff --check` is clean, and a temporary-home harness plan/apply/doctor smoke test recognizes the new assets.
+11. Every dispatch, progress update, and completion summary uses `subagent : [role]`; repeatable roles carry stable `#N` instance numbers and tool-compatible task IDs retain the role prefix.
+12. All five custom agents define readable nickname candidates for clients that display them.
+13. The full repository test suite passes, `git diff --check` is clean, and a temporary-home harness plan/apply/doctor smoke test recognizes the new assets.
