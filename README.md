@@ -26,6 +26,11 @@ Review the printed plan before answering `y`. The installer creates individual l
 | `codex-harness status` | Report drift; exit 1 when managed state differs. |
 | `codex-harness inventory` | List managed assets, versions, sources, and state. |
 | `codex-harness list --kind KIND` | Filter skills, agents, profiles, rules, or utilities. |
+| `codex-harness skill list` | Show skill defaults, local overrides, effective state, and link state. |
+| `codex-harness skill status NAME` | Inspect one managed skill by short name or asset ID. |
+| `codex-harness skill enable NAME` | Force one skill ON on this machine and create its link. |
+| `codex-harness skill disable NAME` | Force one skill OFF on this machine and remove its matching link. |
+| `codex-harness skill reset NAME` | Remove the local override and return to the manifest default. |
 | `codex-harness version [ASSET]` | Show harness or asset version metadata. |
 | `codex-harness bootstrap` | Create only required parent directories. |
 | `codex-harness host init NAME` | Create a tracked, non-secret host overlay skeleton. |

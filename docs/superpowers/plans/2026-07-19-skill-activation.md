@@ -1,6 +1,6 @@
 # Two-Level Skill Activation Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add Git-shared skill defaults and machine-local enable/disable/reset overrides without deleting sources or treating intentional OFF state as drift.
 
@@ -30,7 +30,7 @@
 - Modify: `tools/harness.py`
 - Test: `tests/test_harness.py`
 
-- [ ] **Step 1: Write failing preference/default tests**
+- [x] **Step 1: Write failing preference/default tests**
 
 Add tests that apply a temporary manifest with `enabled = false`, assert that the selected skill link stays absent, and assert that malformed preferences fail with exit 2:
 
@@ -57,7 +57,7 @@ def test_invalid_local_skill_preferences_fail_closed(self):
     self.assertEqual(2, result.returncode)
 ```
 
-- [ ] **Step 2: Run the new tests and verify RED**
+- [x] **Step 2: Run the new tests and verify RED**
 
 Run:
 
@@ -69,7 +69,7 @@ python3 -m unittest \
 
 Expected: failure because `Asset` has no default state and preferences are not loaded.
 
-- [ ] **Step 3: Add the minimal state model**
+- [x] **Step 3: Add the minimal state model**
 
 Add `enabled: bool` to `Asset`, `preferences_path: Path` to `Context`, and parse `item.get("enabled", True)` with a boolean type check. Add:
 
@@ -107,7 +107,7 @@ def effective_enabled(asset: Asset, preferences: SkillPreferences) -> bool:
 
 Add `preferences = "${CODEX_HOME:-$HOME/.codex}/.codex-helper/preferences.toml"` under `[config]` and bump `harness_version` to `0.2.0`.
 
-- [ ] **Step 4: Run the focused tests and verify GREEN**
+- [x] **Step 4: Run the focused tests and verify GREEN**
 
 Run the Step 2 command. Expected: both pass.
 
@@ -118,7 +118,7 @@ Run the Step 2 command. Expected: both pass.
 - Modify: `tools/harness.py`
 - Test: `tests/test_harness.py`
 
-- [ ] **Step 1: Write failing steady-state and drift tests**
+- [x] **Step 1: Write failing steady-state and drift tests**
 
 Add tests proving an intentional disabled target is healthy, a manifest-default OFF link is removed by apply, and a manually removed enabled link remains drift:
 
@@ -135,17 +135,17 @@ def test_disabled_skill_is_healthy_but_manual_unlink_is_drift(self):
     self.assertEqual(1, self.run_cli("status", "--json", check=False).returncode)
 ```
 
-- [ ] **Step 2: Run the test and verify RED**
+- [x] **Step 2: Run the test and verify RED**
 
 Expected: parser rejects `skill` and status cannot represent disabled.
 
-- [ ] **Step 3: Implement activation-aware inspection and apply**
+- [x] **Step 3: Implement activation-aware inspection and apply**
 
 Change `inspect_asset(asset, enabled=True)` so absent+disabled is `disabled`, matching-link+disabled is `pending-disable`, and foreign occupancy is `conflict`. Treat only `current` and `disabled` as healthy in `command_plan`. In `command_apply`, remove a disabled asset only when `_link_matches` succeeds and create links only for enabled assets.
 
 Include `default_enabled`, `local_override`, and `effective_enabled` in skill asset records. Include `context.preferences_path` in snapshot targets.
 
-- [ ] **Step 4: Run the focused test and existing apply tests**
+- [x] **Step 4: Run the focused test and existing apply tests**
 
 Run:
 
@@ -162,7 +162,7 @@ Expected: pass.
 - Modify: `tools/harness.py`
 - Test: `tests/test_harness.py`
 
-- [ ] **Step 1: Write failing CLI lifecycle and conflict tests**
+- [x] **Step 1: Write failing CLI lifecycle and conflict tests**
 
 Add one lifecycle test and one refusal test:
 
@@ -194,11 +194,11 @@ def test_skill_toggle_never_replaces_conflict(self):
     self.assertFalse((self.codex_home / ".codex-helper/preferences.toml").exists())
 ```
 
-- [ ] **Step 2: Run and verify RED**
+- [x] **Step 2: Run and verify RED**
 
 Expected: `skill` is not a valid command.
 
-- [ ] **Step 3: Implement deterministic preferences and toggle transaction**
+- [x] **Step 3: Implement deterministic preferences and toggle transaction**
 
 Add `resolve_skill`, `write_skill_preferences`, `skill_record`, `command_skill_list`, `command_skill_status`, and `command_skill_set`. TOML output must be deterministic:
 
@@ -217,7 +217,7 @@ def skill_preferences_text(preferences: SkillPreferences) -> str:
 
 Add nested argparse subcommands for `skill list`, `skill status`, `skill enable`, `skill disable`, and `skill reset`; every subcommand supports `--json`.
 
-- [ ] **Step 4: Run lifecycle and conflict tests and verify GREEN**
+- [x] **Step 4: Run lifecycle and conflict tests and verify GREEN**
 
 Run the tests added in Step 1. Expected: pass.
 
@@ -232,11 +232,11 @@ Run the tests added in Step 1. Expected: pass.
 - Modify: `tools/harness.py`
 - Modify: `manifest.toml`
 
-- [ ] **Step 1: Write failing documentation and doctor assertions**
+- [x] **Step 1: Write failing documentation and doctor assertions**
 
 Assert the README and user guide contain the five skill commands, local preference path, precedence, and new version. Extend doctor coverage to apply, disable, and still return healthy.
 
-- [ ] **Step 2: Run and verify RED**
+- [x] **Step 2: Run and verify RED**
 
 Run:
 
@@ -246,7 +246,7 @@ python3 -m unittest tests.test_sources tests.test_harness.HarnessTests.test_doct
 
 Expected: documentation assertions fail.
 
-- [ ] **Step 3: Update operator surfaces**
+- [x] **Step 3: Update operator surfaces**
 
 Document both workflows:
 
@@ -264,7 +264,7 @@ codex-harness skill reset parallel-review
 
 Update doctor so preferences parse/validate as part of the manifest/state health check and disabled skills count as healthy links.
 
-- [ ] **Step 4: Run source and doctor tests and verify GREEN**
+- [x] **Step 4: Run source and doctor tests and verify GREEN**
 
 Run the Step 2 command. Expected: pass.
 
@@ -274,7 +274,7 @@ Run the Step 2 command. Expected: pass.
 
 - Verify all modified files
 
-- [ ] **Step 1: Run the complete suite**
+- [x] **Step 1: Run the complete suite**
 
 ```bash
 ./tools/run-tests

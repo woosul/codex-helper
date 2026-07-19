@@ -24,6 +24,25 @@ codex-harness version --json
 
 Read-only commands return 0 for a healthy/current result. `status` and `doctor` return 1 for drift or an unhealthy check. Manifest/argument errors return 2, preserved conflicts return 3, and an apply that restored its pre-operation snapshot returns 4.
 
+## Skill activation
+
+Inspect the two-level state before changing it:
+
+```bash
+codex-harness skill list --json
+codex-harness skill status parallel-review --json
+```
+
+For a Git-shared default, change only that skill asset's `enabled` boolean in `manifest.toml`, then use the safe update sequence. For this machine only, use:
+
+```bash
+codex-harness skill disable parallel-review
+codex-harness skill enable parallel-review
+codex-harness skill reset parallel-review
+```
+
+`skill reset` removes the local override and reconciles the link to the manifest default. Toggle commands never replace a foreign file, directory, or link. Start a new Codex task after a state change so skill discovery uses the new link set.
+
 ## Snapshots and recovery
 
 Create a receipt before manual maintenance:

@@ -41,6 +41,7 @@ class Asset:
     license: str | None
     last_reviewed: str | None
     requires: tuple[str, ...]
+    enabled: bool
 
 
 @dataclass(frozen=True)
@@ -56,6 +57,7 @@ class Context:
     host_overlay: Path
     local_overlay: Path | None
     state_path: Path
+    preferences_path: Path
     backups_dir: Path
     assets: tuple[Asset, ...]
 
@@ -69,6 +71,12 @@ class AssetStatus:
     target: str
     status: str
     actual_target: str | None
+
+
+@dataclass(frozen=True)
+class SkillPreferences:
+    enabled: frozenset[str]
+    disabled: frozenset[str]
 
 
 _DEFAULT_VAR = re.compile(r"\$\{([A-Z_][A-Z0-9_]*):-([^}]+)\}")
@@ -156,6 +164,11 @@ def load_context(
             raise ValueError("duplicate asset id or target")
         ids.add(item["id"])
         targets.add(target)
+        enabled = item.get("enabled", True)
+        if "enabled" in item and item["category"] != "skills":
+            raise ValueError(f"enabled is only supported for skills: {item['id']}")
+        if not isinstance(enabled, bool):
+            raise ValueError(f"enabled must be boolean for {item['id']}")
         assets.append(
             Asset(
                 id=item["id"],
@@ -169,11 +182,22 @@ def load_context(
                 license=item.get("license"),
                 last_reviewed=item.get("last_reviewed"),
                 requires=tuple(item.get("requires", [])),
+                enabled=enabled,
             )
         )
     config = data["config"]
     host_dir = (root / config["host_dir"]).resolve()
     tracked, local = select_host(root, host_dir, host, env)
+    state_path = Path(expand_value(config["state"], env)).expanduser()
+    preferences_path = Path(expand_value(config["preferences"], env)).expanduser()
+    backups_dir = Path(expand_value(config["backups"], env)).expanduser()
+    for name, path in (
+        ("state", state_path),
+        ("preferences", preferences_path),
+        ("backups", backups_dir),
+    ):
+        if not is_lexically_within(path, codex_home):
+            raise ValueError(f"{name} path outside Codex home: {path}")
     return Context(
         root=root.resolve(),
         manifest_path=manifest_path.resolve(),
@@ -185,15 +209,22 @@ def load_context(
         config_base=(root / config["base"]).resolve(),
         host_overlay=tracked,
         local_overlay=local,
-        state_path=Path(expand_value(config["state"], env)).expanduser(),
-        backups_dir=Path(expand_value(config["backups"], env)).expanduser(),
+        state_path=state_path,
+        preferences_path=preferences_path,
+        backups_dir=backups_dir,
         assets=tuple(assets),
     )
 
 
-def inspect_asset(asset: Asset) -> AssetStatus:
+def inspect_asset(asset: Asset, enabled: bool = True) -> AssetStatus:
     if not asset.target.exists() and not asset.target.is_symlink():
-        status, actual = "missing", None
+        status, actual = ("missing" if enabled else "disabled"), None
+    elif not enabled:
+        if _link_matches(asset.target, asset.source):
+            status = "pending-disable"
+            actual = str(asset.source.resolve(strict=False))
+        else:
+            status, actual = "conflict", None
     elif not asset.target.is_symlink():
         status, actual = "conflict", None
     else:
@@ -222,6 +253,78 @@ def read_state(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {"managed_paths": [], "assets": {}}
     return json.loads(path.read_text())
+
+
+def read_skill_preferences(context: Context) -> SkillPreferences:
+    if not context.preferences_path.exists():
+        return SkillPreferences(frozenset(), frozenset())
+    data = tomllib.loads(context.preferences_path.read_text())
+    if data.get("schema_version") != 1:
+        raise ValueError("unsupported skill preferences schema_version")
+    skills = data.get("skills", {})
+    if not isinstance(skills, Mapping):
+        raise ValueError("skills must be a table")
+    enabled_raw = skills.get("enabled", [])
+    disabled_raw = skills.get("disabled", [])
+    if not isinstance(enabled_raw, list) or not all(isinstance(item, str) for item in enabled_raw):
+        raise ValueError("skills.enabled must be a list of asset ids")
+    if not isinstance(disabled_raw, list) or not all(isinstance(item, str) for item in disabled_raw):
+        raise ValueError("skills.disabled must be a list of asset ids")
+    enabled = frozenset(enabled_raw)
+    disabled = frozenset(disabled_raw)
+    if enabled & disabled:
+        raise ValueError("skill preference cannot be both enabled and disabled")
+    known = {asset.id for asset in context.assets if asset.category == "skills"}
+    if not enabled | disabled <= known:
+        raise ValueError("unknown or non-skill asset in skill preferences")
+    return SkillPreferences(enabled, disabled)
+
+
+def local_skill_override(asset: Asset, preferences: SkillPreferences) -> str | None:
+    if asset.id in preferences.enabled:
+        return "enabled"
+    if asset.id in preferences.disabled:
+        return "disabled"
+    return None
+
+
+def effective_enabled(asset: Asset, preferences: SkillPreferences) -> bool:
+    override = local_skill_override(asset, preferences)
+    if override == "enabled":
+        return True
+    if override == "disabled":
+        return False
+    return asset.enabled if asset.category == "skills" else True
+
+
+def skill_preferences_text(preferences: SkillPreferences) -> str:
+    enabled = ", ".join(json.dumps(item) for item in sorted(preferences.enabled))
+    disabled = ", ".join(json.dumps(item) for item in sorted(preferences.disabled))
+    return (
+        "schema_version = 1\n\n[skills]\n"
+        f"enabled = [{enabled}]\n"
+        f"disabled = [{disabled}]\n"
+    )
+
+
+def write_skill_preferences(context: Context, preferences: SkillPreferences) -> None:
+    atomic_write(
+        context.preferences_path,
+        skill_preferences_text(preferences).encode(),
+        mode=0o600,
+    )
+
+
+def resolve_skill(context: Context, name: str) -> Asset:
+    matches = [
+        asset
+        for asset in context.assets
+        if asset.category == "skills"
+        and (asset.id == name or asset.id.removeprefix("skill-") == name)
+    ]
+    if len(matches) != 1:
+        raise ValueError(f"unknown or ambiguous skill: {name}")
+    return matches[0]
 
 
 def combined_overlay(context: Context) -> str:
@@ -253,7 +356,11 @@ def preview_config(context: Context) -> dict[str, Any]:
     }
 
 
-def asset_record(asset: Asset, status: AssetStatus | None = None) -> dict[str, Any]:
+def asset_record(
+    asset: Asset,
+    status: AssetStatus | None = None,
+    preferences: SkillPreferences | None = None,
+) -> dict[str, Any]:
     record = {
         "id": asset.id,
         "kind": asset.kind,
@@ -270,19 +377,29 @@ def asset_record(asset: Asset, status: AssetStatus | None = None) -> dict[str, A
     if status:
         record["status"] = status.status
         record["actual_target"] = status.actual_target
+    if asset.category == "skills" and preferences is not None:
+        record["default_enabled"] = asset.enabled
+        record["local_override"] = local_skill_override(asset, preferences)
+        record["effective_enabled"] = effective_enabled(asset, preferences)
     return record
 
 
 def command_plan(context: Context) -> tuple[dict[str, Any], int]:
-    statuses = tuple(inspect_asset(asset) for asset in context.assets)
+    preferences = read_skill_preferences(context)
+    statuses = tuple(
+        inspect_asset(asset, effective_enabled(asset, preferences)) for asset in context.assets
+    )
     config = preview_config(context)
-    changes = [status.id for status in statuses if status.status != "current"]
+    changes = [status.id for status in statuses if status.status not in {"current", "disabled"}]
     if config["changes"]:
         changes.append("config")
     return {
         "harness_version": context.harness_version,
         "host_overlay": str(context.host_overlay),
-        "assets": [asset_record(asset, status) for asset, status in zip(context.assets, statuses)],
+        "assets": [
+            asset_record(asset, status, preferences)
+            for asset, status in zip(context.assets, statuses)
+        ],
         "config": config,
         "changes": changes,
     }, EXIT_OK
@@ -294,17 +411,34 @@ def command_status(context: Context) -> tuple[dict[str, Any], int]:
 
 
 def command_inventory(context: Context) -> tuple[dict[str, Any], int]:
+    preferences = read_skill_preferences(context)
     return {
         "harness_version": context.harness_version,
         "host_overlay": str(context.host_overlay),
-        "assets": [asset_record(asset, inspect_asset(asset)) for asset in context.assets],
+        "assets": [
+            asset_record(
+                asset,
+                inspect_asset(asset, effective_enabled(asset, preferences)),
+                preferences,
+            )
+            for asset in context.assets
+        ],
     }, EXIT_OK
 
 
 def command_list(context: Context, kind: str) -> tuple[dict[str, Any], int]:
+    preferences = read_skill_preferences(context)
     return {
         "harness_version": context.harness_version,
-        "assets": [asset_record(asset, inspect_asset(asset)) for asset in context.assets if asset.category == kind],
+        "assets": [
+            asset_record(
+                asset,
+                inspect_asset(asset, effective_enabled(asset, preferences)),
+                preferences,
+            )
+            for asset in context.assets
+            if asset.category == kind
+        ],
     }, EXIT_OK
 
 
@@ -316,7 +450,7 @@ def command_version(context: Context, asset_id: str | None) -> tuple[dict[str, A
         }, EXIT_OK
     for asset in context.assets:
         if asset.id == asset_id:
-            return asset_record(asset), EXIT_OK
+            return asset_record(asset, preferences=read_skill_preferences(context)), EXIT_OK
     raise ValueError(f"unknown asset id: {asset_id}")
 
 
@@ -371,7 +505,9 @@ def _recorded_assets(context: Context, state: Mapping[str, Any]) -> dict[str, di
 
 def _snapshot_targets(context: Context, state: Mapping[str, Any]) -> list[Path]:
     targets = [Path(record["target"]) for record in _recorded_assets(context, state).values()]
-    targets.extend((context.codex_home / "config.toml", context.state_path))
+    targets.extend(
+        (context.codex_home / "config.toml", context.state_path, context.preferences_path)
+    )
     ordered: list[Path] = []
     seen: set[Path] = set()
     for target in targets:
@@ -478,6 +614,7 @@ def build_state(
                 "kind": asset.kind,
                 "category": asset.category,
                 "version": asset.version,
+                "enabled": asset.enabled,
             }
             for asset in context.assets
         },
@@ -518,6 +655,7 @@ def command_restore(
 
 def command_apply(context: Context, yes: bool) -> tuple[dict[str, Any], int]:
     previous_state = read_state(context.state_path)
+    preferences = read_skill_preferences(context)
     current_ids = {asset.id for asset in context.assets}
     stale = {
         key: record
@@ -534,10 +672,17 @@ def command_apply(context: Context, yes: bool) -> tuple[dict[str, Any], int]:
             removable_stale.append((key, target))
         else:
             conflicts.append(key)
-    statuses = [inspect_asset(asset) for asset in context.assets]
+    statuses = [
+        inspect_asset(asset, effective_enabled(asset, preferences)) for asset in context.assets
+    ]
     conflicts.extend(status.id for status in statuses if status.status == "conflict")
+    protected_conflicts = [
+        status.id
+        for asset, status in zip(context.assets, statuses)
+        if status.status == "conflict" and not effective_enabled(asset, preferences)
+    ]
     plan, _ = command_plan(context)
-    if conflicts and not yes:
+    if protected_conflicts or (conflicts and not yes):
         return {**plan, "conflicts": conflicts}, EXIT_CONFLICT
     if not plan["changes"] and not removable_stale:
         return {**plan, "snapshot_id": None, "applied": False}, EXIT_OK
@@ -556,7 +701,12 @@ def command_apply(context: Context, yes: bool) -> tuple[dict[str, Any], int]:
             target.unlink()
             mutated()
         for asset, status in zip(context.assets, statuses):
-            if status.status == "current":
+            enabled = effective_enabled(asset, preferences)
+            if status.status in {"current", "disabled"}:
+                continue
+            if not enabled and status.status == "pending-disable":
+                asset.target.unlink()
+                mutated()
                 continue
             if asset.target.exists() or asset.target.is_symlink():
                 _remove_existing(asset.target)
@@ -641,6 +791,118 @@ def command_host_init(context: Context, name: str) -> tuple[dict[str, Any], int]
     )
     atomic_write(target, text.encode(), mode=0o644)
     return {"host": name, "path": str(target)}, EXIT_OK
+
+
+def skill_record(
+    asset: Asset,
+    preferences: SkillPreferences,
+) -> dict[str, Any]:
+    return asset_record(
+        asset,
+        inspect_asset(asset, effective_enabled(asset, preferences)),
+        preferences,
+    )
+
+
+def command_skill_list(context: Context) -> tuple[dict[str, Any], int]:
+    preferences = read_skill_preferences(context)
+    return {
+        "harness_version": context.harness_version,
+        "preferences": str(context.preferences_path),
+        "skills": [
+            skill_record(asset, preferences)
+            for asset in context.assets
+            if asset.category == "skills"
+        ],
+    }, EXIT_OK
+
+
+def command_skill_status(context: Context, name: str) -> tuple[dict[str, Any], int]:
+    preferences = read_skill_preferences(context)
+    asset = resolve_skill(context, name)
+    record = skill_record(asset, preferences)
+    healthy = record["status"] in {"current", "disabled"}
+    return record, EXIT_OK if healthy else EXIT_DRIFT
+
+
+def command_skill_set(
+    context: Context,
+    name: str,
+    action: str,
+) -> tuple[dict[str, Any], int]:
+    asset = resolve_skill(context, name)
+    current = read_skill_preferences(context)
+    enabled = set(current.enabled)
+    disabled = set(current.disabled)
+    if action == "enable":
+        enabled.add(asset.id)
+        disabled.discard(asset.id)
+    elif action == "disable":
+        disabled.add(asset.id)
+        enabled.discard(asset.id)
+    elif action == "reset":
+        enabled.discard(asset.id)
+        disabled.discard(asset.id)
+    else:
+        raise ValueError(f"unsupported skill action: {action}")
+    updated = SkillPreferences(frozenset(enabled), frozenset(disabled))
+
+    occupied = asset.target.exists() or asset.target.is_symlink()
+    matching = _link_matches(asset.target, asset.source)
+    if occupied and not matching:
+        return {
+            **skill_record(asset, current),
+            "error": "skill target is occupied by an unowned object",
+        }, EXIT_CONFLICT
+
+    desired_enabled = effective_enabled(asset, updated)
+    current_status = inspect_asset(asset, effective_enabled(asset, current)).status
+    desired_status = inspect_asset(asset, desired_enabled).status
+    preferences_changed = updated != current
+    link_changed = desired_status not in {"current", "disabled"}
+    if not preferences_changed and not link_changed:
+        return {
+            **skill_record(asset, updated),
+            "action": action,
+            "snapshot_id": None,
+            "changed": False,
+        }, EXIT_OK
+
+    receipt = create_snapshot(context, read_state(context.state_path))
+    fail_after = int(os.environ.get("CODEX_HELPER_SKILL_FAIL_AFTER", "0"))
+    mutations = 0
+
+    def mutated() -> None:
+        nonlocal mutations
+        mutations += 1
+        if fail_after and mutations >= fail_after:
+            raise RuntimeError("injected skill toggle failure")
+
+    try:
+        write_skill_preferences(context, updated)
+        mutated()
+        if desired_enabled and not matching:
+            atomic_symlink(asset.source, asset.target)
+            mutated()
+        elif not desired_enabled and matching:
+            asset.target.unlink()
+            mutated()
+    except Exception as error:
+        restore_receipt(context, receipt)
+        return {
+            "snapshot_id": receipt["snapshot_id"],
+            "rolled_back": True,
+            "error": str(error),
+        }, EXIT_ROLLED_BACK
+
+    record = skill_record(asset, updated)
+    return {
+        **record,
+        "action": action,
+        "previous_status": current_status,
+        "snapshot_id": receipt["snapshot_id"],
+        "changed": True,
+    }, EXIT_OK
 
 
 def command_external_review(
@@ -787,6 +1049,20 @@ def command_doctor(context: Context) -> tuple[dict[str, Any], int]:
         "manifest schema, sources, ids, targets, and approved roots are valid",
     )
 
+    try:
+        preferences = read_skill_preferences(context)
+        preferences_ok = True
+    except (OSError, ValueError, tomllib.TOMLDecodeError):
+        preferences = SkillPreferences(frozenset(), frozenset())
+        preferences_ok = False
+    add(
+        "preferences",
+        preferences_ok,
+        "local skill preferences parse and reference known skill assets"
+        if preferences_ok
+        else "local skill preferences are invalid",
+    )
+
     toml_paths = [context.config_base, context.host_overlay]
     if context.local_overlay:
         toml_paths.append(context.local_overlay)
@@ -833,9 +1109,17 @@ def command_doctor(context: Context) -> tuple[dict[str, Any], int]:
             agents_ok = False
     add("agents", agents_ok, "custom agents are named and read-only")
 
-    statuses = [inspect_asset(asset) for asset in context.assets]
-    links_ok = all(status.status == "current" for status in statuses)
-    add("links", links_ok, "all managed links resolve to declared sources" if links_ok else "managed link drift detected")
+    statuses = [
+        inspect_asset(asset, effective_enabled(asset, preferences)) for asset in context.assets
+    ]
+    links_ok = all(status.status in {"current", "disabled"} for status in statuses)
+    add(
+        "links",
+        links_ok,
+        "all enabled links and disabled absences match declared state"
+        if links_ok
+        else "managed link drift detected",
+    )
 
     config_ok = False
     try:
@@ -956,6 +1240,14 @@ def build_parser() -> argparse.ArgumentParser:
     host_sub = host_parser.add_subparsers(dest="host_command", required=True)
     host_init = host_sub.add_parser("init")
     host_init.add_argument("name")
+    skill_parser = sub.add_parser("skill")
+    skill_sub = skill_parser.add_subparsers(dest="skill_command", required=True)
+    skill_list = skill_sub.add_parser("list")
+    skill_list.add_argument("--json", action="store_true")
+    for name in ("status", "enable", "disable", "reset"):
+        child = skill_sub.add_parser(name)
+        child.add_argument("name")
+        child.add_argument("--json", action="store_true")
     external = sub.add_parser("external-review")
     external.add_argument("--repo", type=Path, required=True)
     external.add_argument("--cycle", type=int, default=1)
@@ -994,6 +1286,12 @@ def main(argv: list[str] | None = None) -> int:
             payload, code = command_bootstrap(context)
         elif args.command == "host" and args.host_command == "init":
             payload, code = command_host_init(context, args.name)
+        elif args.command == "skill" and args.skill_command == "list":
+            payload, code = command_skill_list(context)
+        elif args.command == "skill" and args.skill_command == "status":
+            payload, code = command_skill_status(context, args.name)
+        elif args.command == "skill" and args.skill_command in {"enable", "disable", "reset"}:
+            payload, code = command_skill_set(context, args.name, args.skill_command)
         elif args.command == "external-review":
             return command_external_review(context, args.repo, args.cycle, args.evidence)
         elif args.command == "doctor":

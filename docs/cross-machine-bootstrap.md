@@ -26,6 +26,8 @@ Commit `sources/config/hosts/NAME.toml` when a non-secret preference should foll
 
 The repository path is not embedded in the manifest. Every source is resolved relative to the current clone, so another machine can use a different clone location.
 
+Skill `enabled` defaults in `manifest.toml` travel with Git. Machine-local choices made by `codex-harness skill enable|disable` stay in `${CODEX_HOME}/.codex-helper/preferences.toml` and do not travel to another machine; use `codex-harness skill reset NAME` to return that machine to the shared default.
+
 ## Updates and rollback
 
 Use the safe update sequence in `docs/operations.md`. Each apply creates a receipt automatically. If a new revision behaves incorrectly, restore the reported snapshot ID:

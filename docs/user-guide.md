@@ -74,13 +74,43 @@ codex-external-review --repo "$PWD" --cycle 1 --evidence .codex-loop/evidence.md
 
 ## 스킬 ON/OFF
 
-스킬 상태의 원본은 `manifest.toml`이다. 별도 숨은 토글 파일을 두지 않는다.
+두 방법을 목적에 따라 선택한다. Git으로 공유할 기본값은 `manifest.toml`, 이 머신에서만 적용할 local override는 `~/.codex/.codex-helper/preferences.toml`이 원본이다. 로컬 선택이 manifest 기본값보다 우선한다.
 
-- ON: 해당 스킬 자산 stanza를 manifest에 유지하고 `codex-harness apply --yes`를 실행한다.
-- OFF: 해당 stanza만 manifest에서 제거하고 `codex-harness plan`을 검토한 뒤 적용한다. 기존 대상이 여전히 하네스 원본을 가리킬 때만 안전하게 링크를 제거한다. `sources/skills/<name>`은 남겨 두면 언제든 stanza를 복구할 수 있다.
-- 머신별로만 잠시 끄고 싶다면 전역 manifest를 바꾸기보다 해당 머신에서 작업 범위와 호출 조건을 제한한다. 링크를 손으로 지우면 `status`가 드리프트로 보고하므로 상시 운용 방식으로 사용하지 않는다.
+현재 상태는 다음 명령으로 확인한다.
 
-변경은 하나의 커밋으로 남겨 다른 머신에서도 같은 ON/OFF 상태를 재현한다. 스킬의 자동 발동 범위는 `SKILL.md` frontmatter의 `description`으로 좁히고, 수동 호출 전용이면 설명에 “명시적으로 요청할 때”를 적는다.
+```bash
+codex-harness skill list --json
+codex-harness skill status parallel-review --json
+```
+
+### 방법 1: 모든 머신에 공유하는 기본값
+
+해당 skill 자산 stanza의 `enabled`만 바꾼다. 생략하면 `true`다.
+
+```toml
+[[assets]]
+id = "skill-parallel-review"
+category = "skills"
+enabled = false
+```
+
+그 다음 `codex-harness plan`, `codex-harness apply --yes`, `codex-harness doctor`로 검증하고 manifest 변경을 커밋한다. 효과적으로 OFF인 스킬의 원본은 그대로 남고, 하네스가 소유한 일치 링크만 제거된다.
+
+### 방법 2: 현재 머신에서만 선택
+
+```bash
+codex-harness skill disable parallel-review
+codex-harness skill enable parallel-review
+codex-harness skill reset parallel-review
+```
+
+- `disable`: 로컬 OFF를 기록하고 일치하는 링크를 즉시 제거한다.
+- `enable`: 로컬 ON을 기록하고 링크를 즉시 만든다. manifest 기본값이 OFF여도 이 머신에서는 ON이다.
+- `reset`: 로컬 선택을 지우고 manifest 기본값으로 돌아간다.
+
+두 목록에 같은 스킬이 들어가거나 알 수 없는 asset ID가 있으면 하네스가 fail-closed한다. 일반 파일, 디렉터리, 외부 링크가 대상 위치를 차지하면 toggle은 preference와 대상을 모두 변경하지 않고 conflict를 반환한다.
+
+링크를 손으로 지우면 local override가 없으므로 `status`가 드리프트로 보고하고 다음 `apply`가 기본값에 맞춰 복구한다. 새 상태는 새 Codex 작업부터 확실히 적용된다. 이미 열린 작업은 로드된 스킬 지침을 문맥에 보유할 수 있다.
 
 ## 설정과 호스트 오버레이
 

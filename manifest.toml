@@ -1,5 +1,5 @@
 schema_version = 1
-harness_version = "0.1.0"
+harness_version = "0.2.0"
 minimum_codex_version = "0.144.5"
 
 [paths]
@@ -11,6 +11,7 @@ user_bin = "$HOME/.local/bin"
 base = "sources/config/base.toml"
 host_dir = "sources/config/hosts"
 state = "${CODEX_HOME:-$HOME/.codex}/.codex-helper/state.json"
+preferences = "${CODEX_HOME:-$HOME/.codex}/.codex-helper/preferences.toml"
 backups = "${CODEX_HOME:-$HOME/.codex}/backups/codex-helper"
 
 [[assets]]
@@ -98,6 +99,7 @@ version = "1.0.0"
 id = "skill-parallel-review"
 kind = "symlink"
 category = "skills"
+enabled = true
 source = "sources/skills/parallel-review"
 target = "$HOME/.agents/skills/parallel-review"
 scope = "global"
@@ -110,6 +112,7 @@ last_reviewed = "2026-07-19"
 id = "skill-dual-loop-review"
 kind = "symlink"
 category = "skills"
+enabled = true
 source = "sources/skills/dual-loop-review"
 target = "$HOME/.agents/skills/dual-loop-review"
 scope = "global"

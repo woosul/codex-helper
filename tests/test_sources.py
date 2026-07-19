@@ -54,6 +54,14 @@ class SourceContractTests(unittest.TestCase):
         self.assertEqual(len(assets), len({asset["id"] for asset in assets}))
         self.assertEqual(len(assets), len({asset["target"] for asset in assets}))
 
+    def test_manifest_defines_skill_activation_contract(self):
+        data = tomllib.loads((ROOT / "manifest.toml").read_text())
+        self.assertEqual("0.2.0", data["harness_version"])
+        self.assertIn("preferences", data["config"])
+        for asset in data["assets"]:
+            if asset["category"] == "skills":
+                self.assertIsInstance(asset.get("enabled", True), bool)
+
     def test_manifest_sources_exist(self):
         data = tomllib.loads((ROOT / "manifest.toml").read_text())
         for asset in data["assets"]:
@@ -97,6 +105,23 @@ class SourceContractTests(unittest.TestCase):
             "codex-harness doctor",
         ):
             self.assertIn(phrase, text)
+
+    def test_operator_docs_cover_two_level_skill_activation(self):
+        readme = (ROOT / "README.md").read_text()
+        guide = (ROOT / "docs/user-guide.md").read_text()
+        operations = (ROOT / "docs/operations.md").read_text()
+        for command in (
+            "codex-harness skill list",
+            "codex-harness skill status",
+            "codex-harness skill enable",
+            "codex-harness skill disable",
+            "codex-harness skill reset",
+        ):
+            self.assertIn(command, readme)
+            self.assertIn(command, guide)
+        self.assertIn("preferences.toml", guide)
+        self.assertIn("local override", guide)
+        self.assertIn("skill reset", operations)
 
     def test_docs_define_safe_update_sequence(self):
         text = (ROOT / "docs/operations.md").read_text()

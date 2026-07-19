@@ -37,7 +37,7 @@ class HarnessTests(unittest.TestCase):
     def test_plan_is_read_only_and_lists_declared_assets(self):
         result = self.run_cli("plan", "--json")
         payload = json.loads(result.stdout)
-        self.assertEqual("0.1.0", payload["harness_version"])
+        self.assertEqual("0.2.0", payload["harness_version"])
         self.assertTrue(any(item["id"] == "global-agents" for item in payload["assets"]))
         self.assertFalse(self.codex_home.exists())
 
@@ -64,6 +64,214 @@ class HarnessTests(unittest.TestCase):
         result = self.run_cli("--manifest", str(bad), "plan", check=False)
         self.assertEqual(2, result.returncode)
         self.assertIn("outside approved roots", result.stderr)
+
+    def test_manifest_can_disable_a_skill_by_default(self):
+        manifest = self.home / "manifest.toml"
+        manifest.write_text((ROOT / "manifest.toml").read_text().replace(
+            'id = "skill-parallel-review"\nkind = "symlink"\ncategory = "skills"\nenabled = true',
+            'id = "skill-parallel-review"\nkind = "symlink"\ncategory = "skills"\nenabled = false',
+            1,
+        ))
+        self.run_cli("--manifest", str(manifest), "apply", "--yes")
+        self.assertFalse((self.home / ".agents/skills/parallel-review").exists())
+        self.assertTrue((self.home / ".agents/skills/dual-loop-review").is_symlink())
+
+    def test_omitted_manifest_enabled_defaults_to_true(self):
+        manifest = self.home / "manifest.toml"
+        manifest.write_text((ROOT / "manifest.toml").read_text().replace(
+            'category = "skills"\nenabled = true\nsource = "sources/skills/parallel-review"',
+            'category = "skills"\nsource = "sources/skills/parallel-review"',
+            1,
+        ))
+        self.run_cli("--manifest", str(manifest), "apply", "--yes")
+        self.assertTrue((self.home / ".agents/skills/parallel-review").is_symlink())
+
+    def test_manifest_default_change_removes_only_matching_skill_link(self):
+        self.run_cli("apply", "--yes")
+        manifest = self.home / "manifest.toml"
+        manifest.write_text((ROOT / "manifest.toml").read_text().replace(
+            'id = "skill-parallel-review"\nkind = "symlink"\ncategory = "skills"\nenabled = true',
+            'id = "skill-parallel-review"\nkind = "symlink"\ncategory = "skills"\nenabled = false',
+            1,
+        ))
+        self.run_cli("--manifest", str(manifest), "apply", "--yes")
+        self.assertFalse((self.home / ".agents/skills/parallel-review").exists())
+        self.assertTrue((self.home / ".agents/skills/dual-loop-review").is_symlink())
+
+    def test_apply_never_removes_foreign_target_for_disabled_skill(self):
+        target = self.home / ".agents/skills/parallel-review"
+        target.parent.mkdir(parents=True)
+        target.write_text("foreign")
+        manifest = self.home / "manifest.toml"
+        manifest.write_text((ROOT / "manifest.toml").read_text().replace(
+            'id = "skill-parallel-review"\nkind = "symlink"\ncategory = "skills"\nenabled = true',
+            'id = "skill-parallel-review"\nkind = "symlink"\ncategory = "skills"\nenabled = false',
+            1,
+        ))
+        result = self.run_cli(
+            "--manifest", str(manifest), "apply", "--yes", check=False
+        )
+        self.assertEqual(3, result.returncode)
+        self.assertEqual("foreign", target.read_text())
+
+    def test_invalid_local_skill_preferences_fail_closed(self):
+        preferences = self.codex_home / ".codex-helper/preferences.toml"
+        preferences.parent.mkdir(parents=True)
+        preferences.write_text(
+            'schema_version = 1\n[skills]\nenabled = ["skill-parallel-review"]\n'
+            'disabled = ["skill-parallel-review"]\n'
+        )
+        result = self.run_cli("plan", "--json", check=False)
+        self.assertEqual(2, result.returncode)
+
+    def test_local_skill_override_lifecycle(self):
+        self.run_cli("apply", "--yes")
+        disabled = json.loads(self.run_cli(
+            "skill", "disable", "parallel-review", "--json"
+        ).stdout)
+        self.assertFalse(disabled["effective_enabled"])
+        self.assertEqual("disabled", disabled["local_override"])
+        self.assertFalse((self.home / ".agents/skills/parallel-review").exists())
+        preferences = self.codex_home / ".codex-helper/preferences.toml"
+        self.assertEqual(0o600, preferences.stat().st_mode & 0o777)
+
+        status = self.run_cli("status", "--json")
+        item = next(
+            asset for asset in json.loads(status.stdout)["assets"]
+            if asset["id"] == "skill-parallel-review"
+        )
+        self.assertEqual("disabled", item["status"])
+
+        enabled = json.loads(self.run_cli(
+            "skill", "enable", "parallel-review", "--json"
+        ).stdout)
+        self.assertTrue(enabled["effective_enabled"])
+        self.assertEqual("enabled", enabled["local_override"])
+        self.assertTrue((self.home / ".agents/skills/parallel-review").is_symlink())
+
+        reset = json.loads(self.run_cli(
+            "skill", "reset", "parallel-review", "--json"
+        ).stdout)
+        self.assertIsNone(reset["local_override"])
+        self.assertTrue(reset["effective_enabled"])
+
+    def test_disabled_skill_is_healthy_but_manual_unlink_is_drift(self):
+        self.run_cli("apply", "--yes")
+        self.run_cli("skill", "disable", "parallel-review", "--json")
+        self.assertEqual(0, self.run_cli("status", "--json").returncode)
+
+        link = self.home / ".agents/skills/dual-loop-review"
+        link.unlink()
+        self.assertEqual(1, self.run_cli("status", "--json", check=False).returncode)
+
+    def test_skill_toggle_never_replaces_conflict(self):
+        target = self.home / ".agents/skills/parallel-review"
+        target.parent.mkdir(parents=True)
+        target.write_text("foreign")
+        result = self.run_cli(
+            "skill", "disable", "parallel-review", "--json", check=False
+        )
+        self.assertEqual(3, result.returncode)
+        self.assertEqual("foreign", target.read_text())
+        self.assertFalse((self.codex_home / ".codex-helper/preferences.toml").exists())
+
+    def test_local_enable_overrides_manifest_default_and_reset_restores_it(self):
+        manifest = self.home / "manifest.toml"
+        manifest.write_text((ROOT / "manifest.toml").read_text().replace(
+            'id = "skill-parallel-review"\nkind = "symlink"\ncategory = "skills"\nenabled = true',
+            'id = "skill-parallel-review"\nkind = "symlink"\ncategory = "skills"\nenabled = false',
+            1,
+        ))
+        prefix = ("--manifest", str(manifest))
+        self.run_cli(*prefix, "apply", "--yes")
+        enabled = json.loads(self.run_cli(
+            *prefix, "skill", "enable", "parallel-review", "--json"
+        ).stdout)
+        self.assertFalse(enabled["default_enabled"])
+        self.assertTrue(enabled["effective_enabled"])
+
+        reset = json.loads(self.run_cli(
+            *prefix, "skill", "reset", "parallel-review", "--json"
+        ).stdout)
+        self.assertFalse(reset["effective_enabled"])
+        self.assertEqual("disabled", reset["status"])
+
+    def test_snapshot_restores_skill_preferences_and_link(self):
+        self.run_cli("apply", "--yes")
+        self.run_cli("skill", "disable", "parallel-review", "--json")
+        snapshot = json.loads(self.run_cli("snapshot", "--json").stdout)["snapshot_id"]
+        self.run_cli("skill", "enable", "parallel-review", "--json")
+        self.run_cli("restore", snapshot, "--yes")
+
+        status = json.loads(self.run_cli(
+            "skill", "status", "parallel-review", "--json"
+        ).stdout)
+        self.assertEqual("disabled", status["local_override"])
+        self.assertEqual("disabled", status["status"])
+
+    def test_doctor_is_healthy_with_intentionally_disabled_skill(self):
+        self.run_cli("apply", "--yes")
+        self.run_cli("skill", "disable", "parallel-review", "--json")
+        result = self.run_cli("doctor", "--json", check=False)
+        self.assertEqual(0, result.returncode, result.stdout)
+        self.assertEqual("healthy", json.loads(result.stdout)["health"])
+
+    def test_skill_list_reports_default_override_and_effective_state(self):
+        self.run_cli("apply", "--yes")
+        self.run_cli("skill", "disable", "parallel-review", "--json")
+        payload = json.loads(self.run_cli("skill", "list", "--json").stdout)
+        item = next(
+            skill for skill in payload["skills"]
+            if skill["id"] == "skill-parallel-review"
+        )
+        self.assertTrue(item["default_enabled"])
+        self.assertEqual("disabled", item["local_override"])
+        self.assertFalse(item["effective_enabled"])
+
+    def test_enabled_is_rejected_for_non_skill_assets(self):
+        manifest = self.home / "manifest.toml"
+        manifest.write_text((ROOT / "manifest.toml").read_text().replace(
+            'id = "global-agents"',
+            'id = "global-agents"\nenabled = false',
+            1,
+        ))
+        result = self.run_cli("--manifest", str(manifest), "plan", check=False)
+        self.assertEqual(2, result.returncode)
+        self.assertIn("only supported for skills", result.stderr)
+
+    def test_malformed_skill_preferences_return_usage_error(self):
+        preferences = self.codex_home / ".codex-helper/preferences.toml"
+        preferences.parent.mkdir(parents=True)
+        preferences.write_text('schema_version = 1\nskills = "invalid"\n')
+        result = self.run_cli("plan", "--json", check=False)
+        self.assertEqual(2, result.returncode)
+        self.assertIn("skills must be a table", result.stderr)
+
+    def test_doctor_reports_malformed_preferences_as_unhealthy_json(self):
+        self.run_cli("apply", "--yes")
+        preferences = self.codex_home / ".codex-helper/preferences.toml"
+        preferences.write_text('schema_version = 1\nskills = "invalid"\n')
+        result = self.run_cli("doctor", "--json", check=False)
+        self.assertEqual(1, result.returncode)
+        payload = json.loads(result.stdout)
+        self.assertEqual("unhealthy", payload["health"])
+        check = next(item for item in payload["checks"] if item["id"] == "preferences")
+        self.assertEqual("fail", check["status"])
+
+    def test_skill_toggle_rolls_back_preferences_and_link_after_failure(self):
+        self.run_cli("apply", "--yes")
+        env = {**self.env, "CODEX_HELPER_SKILL_FAIL_AFTER": "1"}
+        result = subprocess.run(
+            [str(CLI), "skill", "disable", "parallel-review", "--json"],
+            cwd=ROOT,
+            env=env,
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(4, result.returncode, result.stderr)
+        self.assertTrue(json.loads(result.stdout)["rolled_back"])
+        self.assertFalse((self.codex_home / ".codex-helper/preferences.toml").exists())
+        self.assertTrue((self.home / ".agents/skills/parallel-review").is_symlink())
 
     def test_apply_is_idempotent_and_preserves_unmanaged_entries(self):
         self.codex_home.mkdir(parents=True)
@@ -158,7 +366,7 @@ class HarnessTests(unittest.TestCase):
             capture_output=True,
         )
         self.assertEqual(0, result.returncode, result.stderr)
-        self.assertEqual("0.1.0", json.loads(result.stdout)["harness_version"])
+        self.assertEqual("0.2.0", json.loads(result.stdout)["harness_version"])
 
     def test_doctor_passes_for_sources_and_applied_temp_home(self):
         self.run_cli("apply", "--yes")
