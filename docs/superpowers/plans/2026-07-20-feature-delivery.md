@@ -357,12 +357,15 @@ Extend `test_feature_delivery_skill_contract` with these exact portable display 
 
 ```python
         for phrase in (
-            "subagent : [planner]",
-            "subagent : [scanner]",
-            "subagent : [developer#1]",
-            "subagent : [reviewer#1]",
-            "subagent : [verifier#1]",
-            "developer_1__",
+            "planner - plan feature delivery",
+            "developer 1 - implement role badges",
+            "reviewer 1 - review role spec",
+            "reviewer 2 - review role quality",
+            "verifier 1 - verify acceptance criteria",
+            "reviewer_2__review_role_quality",
+            "numbers increase monotonically",
+            "follow-up to the same thread reuses",
+            "Subagents echo the assigned label",
             "dispatch, progress, and completion",
         ):
             self.assertIn(phrase, text)
@@ -392,9 +395,9 @@ nickname_candidates = ["Verifier 1", "Verifier 2", "Verifier 3"]
 
 Place the matching line in each role file; do not combine them into one file.
 
-Add a `Visibility Contract` section to the feature-delivery skill. Require the root to emit `subagent : [planner]` and `subagent : [scanner]` for singleton roles and one-based `subagent : [developer#1]`, `subagent : [reviewer#1]`, and `subagent : [verifier#1]` badges for repeatable roles. Keep the same badge on dispatch, progress, and completion updates. Require tool-compatible task IDs such as `developer_1__feature` when `#` is not accepted.
+Add a `Visibility Contract` section to the feature-delivery skill. Require the root to assign `role instance - verb-object task name` labels such as `planner - plan feature delivery`, `developer 1 - implement role badges`, `reviewer 1 - review role spec`, `reviewer 2 - review role quality`, and `verifier 1 - verify acceptance criteria`. Keep the same label on dispatch, progress, and completion updates. Repeatable-role numbers increase monotonically for each distinct spawned thread and are never recycled; a follow-up to the same thread reuses its number. Subagents echo the root-assigned label and never allocate numbers. Require matching tool-compatible task IDs such as `reviewer_2__review_role_quality`.
 
-Add a concise `AGENTS.md` rule requiring the portable role badge on every subagent dispatch and status summary.
+Add a concise `AGENTS.md` rule requiring the root-assigned portable role/task label on every subagent dispatch and status summary.
 
 - [ ] **Step 4: Run the source and harness tests and verify GREEN**
 

@@ -17,7 +17,7 @@ Codex already gives the root agent orchestration responsibility. This design the
 - Add an enabled-by-default `feature-delivery` skill that connects planning, implementation, review, verification, and root integration.
 - Use Subagent-Driven execution by default when the caller does not select an execution strategy.
 - Let the root replace the default stage sequence for one task with an explicit inline workflow override.
-- Make the active role visible in every dispatch, progress update, and completion summary with stable `subagent : [role]` badges.
+- Make the active role visible in every dispatch, progress update, and completion summary with stable `role instance - task name` labels.
 - Preserve root ownership of user communication, scope decisions, commits, pushes, and final integration.
 - Allow one developer to edit the active checkout; require a separate Git worktree per developer before parallel write work starts.
 - Keep the workflow optional through the existing repository-default and machine-local skill activation controls.
@@ -84,9 +84,9 @@ The skill is a manifest-managed asset and defaults to enabled. Existing `codex-h
 
 ### Role visibility
 
-The root emits a stable textual badge before each dispatch and keeps it on progress and completion summaries. Singleton roles use `subagent : [planner]` and `subagent : [scanner]`. Repeatable roles use one-based instance numbers such as `subagent : [developer#1]`, `subagent : [developer#2]`, `subagent : [reviewer#1]`, and `subagent : [verifier#1]`.
+The root assigns a stable textual label before each dispatch and keeps it on progress and completion summaries. Labels use `role instance - verb-object task name`, for example `planner - plan feature delivery`, `developer 1 - implement role badges`, `reviewer 1 - review role spec`, `reviewer 2 - review role quality`, and `verifier 1 - verify acceptance criteria`.
 
-Internal task identifiers use tool-compatible role prefixes such as `developer_1__checkout` because task IDs may not accept brackets or `#`. Custom agent `nickname_candidates` expose readable role names in Codex clients where nickname display is supported. Textual badges remain the portable contract when the client UI does not render a distinct native badge.
+The root owns label allocation. Repeatable-role numbers increase monotonically for each distinct spawned thread during a workflow and are never recycled; only a follow-up to the same thread reuses its number. Subagents echo the assigned label and never allocate their own number. Internal task identifiers mirror the label with a tool-compatible form such as `reviewer_2__review_role_quality`. Custom agent `nickname_candidates` expose readable role names in Codex clients where nickname display is supported. Textual labels remain the portable contract when the client UI does not render a distinct native badge.
 
 ## Workflow
 
@@ -141,7 +141,7 @@ Every agent response includes:
 - unresolved risks, uncertainty, or blockers;
 - no raw logs unless the root explicitly requests them.
 
-The root prefixes dispatch, progress, and completion updates with the same role badge so the user can map each result back to the active subagent instance.
+The root prefixes dispatch, progress, and completion updates with the same assigned label so the user can map each result back to the active subagent thread.
 
 This keeps noisy exploration and test output out of the root context while preserving enough evidence for independent checking.
 
@@ -180,6 +180,6 @@ The change is accepted when:
 8. Manifest targets remain unique and all managed sources exist.
 9. The feature-delivery skill is enabled by default and can be toggled with the existing skill commands.
 10. Operator documentation explains when the workflow triggers, how to invoke it, how to override it inline, and who owns mutations and integration.
-11. Every dispatch, progress update, and completion summary uses `subagent : [role]`; repeatable roles carry stable `#N` instance numbers and tool-compatible task IDs retain the role prefix.
+11. Every dispatch, progress update, and completion summary uses `role instance - task name`; the root assigns monotonic repeatable-role numbers, follow-ups reuse the same number, and tool-compatible task IDs mirror the label.
 12. All five custom agents define readable nickname candidates for clients that display them.
 13. The full repository test suite passes, `git diff --check` is clean, and a temporary-home harness plan/apply/doctor smoke test recognizes the new assets.
