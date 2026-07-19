@@ -643,6 +643,54 @@ def command_host_init(context: Context, name: str) -> tuple[dict[str, Any], int]
     return {"host": name, "path": str(target)}, EXIT_OK
 
 
+def command_external_review(
+    context: Context,
+    repo: Path,
+    cycle: int,
+    evidence: Path | None,
+) -> int:
+    if cycle < 1 or cycle > 3:
+        print("ERROR: cycle must be between 1 and 3", file=sys.stderr)
+        return EXIT_USAGE
+    if not (repo / ".git").exists():
+        print("ERROR: --repo must be a Git repository", file=sys.stderr)
+        return EXIT_USAGE
+    skill = context.root / "sources/skills/dual-loop-review"
+    prompt = (skill / "references/reviewer-prompt.md").read_text()
+    if evidence:
+        prompt += "\n\nVerification evidence:\n" + evidence.read_text()
+    schema = skill / "schemas/verdict.schema.json"
+    with tempfile.TemporaryDirectory(prefix="codex-external-review-") as temp:
+        output = Path(temp) / "verdict.json"
+        command = [
+            "codex",
+            "exec",
+            "--ephemeral",
+            "--sandbox",
+            "read-only",
+            "--profile",
+            "deep-review",
+            "--cd",
+            str(repo.resolve()),
+            "--output-schema",
+            str(schema),
+            "--output-last-message",
+            str(output),
+            "-",
+        ]
+        completed = subprocess.run(command, input=prompt, text=True, capture_output=True)
+        if completed.returncode != 0:
+            print(completed.stderr, file=sys.stderr, end="")
+            return EXIT_DRIFT
+        payload = json.loads(output.read_text())
+        allowed = {"pass", "changes_requested", "blocked"}
+        if payload.get("verdict") not in allowed:
+            print("ERROR: invalid external review verdict", file=sys.stderr)
+            return EXIT_DRIFT
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return EXIT_OK
+
+
 def emit(payload: dict[str, Any], json_mode: bool) -> None:
     if json_mode:
         print(json.dumps(payload, indent=2, sort_keys=True))
@@ -682,6 +730,10 @@ def build_parser() -> argparse.ArgumentParser:
     host_sub = host_parser.add_subparsers(dest="host_command", required=True)
     host_init = host_sub.add_parser("init")
     host_init.add_argument("name")
+    external = sub.add_parser("external-review")
+    external.add_argument("--repo", type=Path, required=True)
+    external.add_argument("--cycle", type=int, default=1)
+    external.add_argument("--evidence", type=Path)
     return parser
 
 
@@ -714,6 +766,8 @@ def main(argv: list[str] | None = None) -> int:
             payload, code = command_bootstrap(context)
         elif args.command == "host" and args.host_command == "init":
             payload, code = command_host_init(context, args.name)
+        elif args.command == "external-review":
+            return command_external_review(context, args.repo, args.cycle, args.evidence)
         else:
             parser.error(f"unsupported command: {args.command}")
         emit(payload, getattr(args, "json", False))

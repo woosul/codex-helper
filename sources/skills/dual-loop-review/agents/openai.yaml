@@ -1,0 +1,4 @@
+interface:
+  display_name: "Dual-Loop Review"
+  short_description: "Verify internally, then review in a fresh read-only Codex context"
+  default_prompt: "Run the bounded internal/external review loop for this implementation."
