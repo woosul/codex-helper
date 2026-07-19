@@ -50,6 +50,23 @@ class SourceContractTests(unittest.TestCase):
         self.assertEqual(len(assets), len({asset["id"] for asset in assets}))
         self.assertEqual(len(assets), len({asset["target"] for asset in assets}))
 
+    def test_manifest_sources_exist(self):
+        data = tomllib.loads((ROOT / "manifest.toml").read_text())
+        for asset in data["assets"]:
+            with self.subTest(asset=asset["id"]):
+                self.assertTrue((ROOT / asset["source"]).exists())
+
+    def test_parallel_review_skill_contract(self):
+        skill = ROOT / "sources/skills/parallel-review/SKILL.md"
+        text = skill.read_text()
+        self.assertIn("name: parallel-review", text)
+        self.assertIn("scanner", text)
+        self.assertIn("reviewer", text)
+        self.assertIn("verifier", text)
+        self.assertIn("Wait for all", text)
+        self.assertIn("root agent", text)
+        self.assertIn("Do not delegate concurrent writes", text)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Parallel Review"
+  short_description: "Run bounded read-only review perspectives in parallel"
+  default_prompt: "Review this change with independent scanner, reviewer, and verifier perspectives, then consolidate the evidence."
