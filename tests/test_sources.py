@@ -70,6 +70,8 @@ class SourceContractTests(unittest.TestCase):
         self.assertIn("Wait for all", text)
         self.assertIn("root agent", text)
         self.assertIn("Do not delegate concurrent writes", text)
+        self.assertIn("persistent parent task", text)
+        self.assertIn("Do not run this workflow with `codex exec --ephemeral`", text)
 
     def test_operator_docs_exist_and_readme_links_them(self):
         readme = (ROOT / "README.md").read_text()
@@ -78,9 +80,23 @@ class SourceContractTests(unittest.TestCase):
             "docs/operations.md",
             "docs/cross-machine-bootstrap.md",
             "docs/sources.md",
+            "docs/user-guide.md",
+            "docs/research/codex-external-review-agents-2026-07.md",
+            "docs/research/sdd-tdd-skills-2026-07.md",
         ):
             self.assertTrue((ROOT / relative).is_file())
             self.assertIn(relative, readme)
+
+    def test_user_guide_covers_skill_lifecycle(self):
+        text = (ROOT / "docs/user-guide.md").read_text()
+        for phrase in (
+            "스킬 추가",
+            "스킬 ON/OFF",
+            "codex-harness plan",
+            "codex-harness inventory",
+            "codex-harness doctor",
+        ):
+            self.assertIn(phrase, text)
 
     def test_docs_define_safe_update_sequence(self):
         text = (ROOT / "docs/operations.md").read_text()

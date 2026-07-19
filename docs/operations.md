@@ -54,6 +54,8 @@ Tracked host files contain portable non-secret preferences. Ignored `NAME.local.
 
 ## External review
 
+Native `$parallel-review` uses Codex subagents and therefore needs a persistent parent task. Run it from the app, an interactive CLI task, or a non-ephemeral `codex exec` invocation. Do not combine it with `codex exec --ephemeral`; ephemeral mode is reserved here for the single-process external reviewer below.
+
 After local tests have fresh evidence:
 
 ```bash

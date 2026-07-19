@@ -17,6 +17,8 @@ description: Use when the user explicitly requests parallel review, multiple ind
 
 ## Boundaries
 
+- Native subagents require a persistent parent task until every delegated role has returned.
+- Do not run this workflow with `codex exec --ephemeral`. Use an interactive/app task or omit `--ephemeral` from CLI automation. Reserve ephemeral execution for a single-process external review.
 - Do not delegate concurrent writes to the same checkout.
 - Subagents do not commit, push, approve, or make the final verdict.
 - The root agent owns scope, mutations, consolidation, and final judgment.

@@ -48,5 +48,6 @@ This repository does not own Codex authentication, sessions, logs, caches, datab
 - [Operations](docs/operations.md)
 - [Cross-machine bootstrap](docs/cross-machine-bootstrap.md)
 - [Sources and adaptations](docs/sources.md)
-
-Research on non-Codex external review agents and SDD/TDD skill recommendations begins only after the real-machine acceptance criteria pass.
+- [User guide](docs/user-guide.md)
+- [Codex external review agent research](docs/research/codex-external-review-agents-2026-07.md)
+- [SDD/TDD skill recommendations](docs/research/sdd-tdd-skills-2026-07.md)
