@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+exec uv run --with tomlkit==0.13.3 python "$ROOT/tools/harness.py" "$@"
