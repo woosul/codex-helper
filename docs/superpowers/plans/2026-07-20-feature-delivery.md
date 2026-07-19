@@ -38,7 +38,7 @@
 - Create: `sources/agents/developer.toml`
 - Modify: `manifest.toml`
 
-- [ ] **Step 1: Write failing source and version tests**
+- [x] **Step 1: Write failing source and version tests**
 
 In `tests/test_sources.py`, add the two new agent paths to `test_manifest_and_toml_sources_parse`, replace `test_agents_are_named_and_read_only` with the permission-aware contract below, and change the skill-activation version assertion to `0.3.0`:
 
@@ -91,7 +91,7 @@ In `tests/test_sources.py`, add the two new agent paths to `test_manifest_and_to
 
 In `tests/test_harness.py`, change both literal expected harness versions from `0.2.0` to `0.3.0`.
 
-- [ ] **Step 2: Run the focused tests and verify RED**
+- [x] **Step 2: Run the focused tests and verify RED**
 
 Run:
 
@@ -101,7 +101,7 @@ uv run python -m unittest tests.test_sources.SourceContractTests.test_agents_hav
 
 Expected: FAIL because `planner.toml`, `developer.toml`, and the manifest entries do not exist and the manifest still reports `0.2.0`.
 
-- [ ] **Step 3: Add the planner and developer agent files**
+- [x] **Step 3: Add the planner and developer agent files**
 
 Create `sources/agents/planner.toml`:
 
@@ -134,7 +134,7 @@ Return the outcome, changed files, commands and results, risks, uncertainty, and
 """
 ```
 
-- [ ] **Step 4: Register assets and bump the harness version**
+- [x] **Step 4: Register assets and bump the harness version**
 
 Change the top-level manifest version:
 
@@ -181,7 +181,7 @@ license = "local-adaptation"
 last_reviewed = "2026-07-20"
 ```
 
-- [ ] **Step 5: Run focused and manifest regression tests and verify GREEN**
+- [x] **Step 5: Run focused and manifest regression tests and verify GREEN**
 
 Run:
 
@@ -191,7 +191,7 @@ uv run python -m unittest tests.test_sources tests.test_harness -v
 
 Expected: PASS, with unique agent/skill targets and `0.3.0` in plan/version output.
 
-- [ ] **Step 6: Commit the role and manifest layer**
+- [x] **Step 6: Commit the role and manifest layer**
 
 ```bash
 git add tests/test_sources.py tests/test_harness.py sources/agents/planner.toml sources/agents/developer.toml manifest.toml
@@ -206,7 +206,7 @@ git commit -m "feat: add planner and developer agents"
 - Create: `sources/skills/feature-delivery/agents/openai.yaml`
 - Modify: `AGENTS.md`
 
-- [ ] **Step 1: Write the failing workflow contract test**
+- [x] **Step 1: Write the failing workflow contract test**
 
 Add this test to `tests/test_sources.py`:
 
@@ -237,7 +237,7 @@ Add this test to `tests/test_sources.py`:
         self.assertIn("non-trivial feature", guidance)
 ```
 
-- [ ] **Step 2: Run the workflow test and verify RED**
+- [x] **Step 2: Run the workflow test and verify RED**
 
 Run:
 
@@ -247,7 +247,7 @@ uv run python -m unittest tests.test_sources.SourceContractTests.test_feature_de
 
 Expected: ERROR or FAIL because the new skill files and durable guidance do not exist.
 
-- [ ] **Step 3: Create the orchestration skill**
+- [x] **Step 3: Create the orchestration skill**
 
 Create `sources/skills/feature-delivery/SKILL.md`:
 
@@ -304,7 +304,7 @@ interface:
   default_prompt: "Deliver this feature through planner/scanner discovery, a root plan gate, one bounded developer, and independent reviewer/verifier checks."
 ```
 
-- [ ] **Step 4: Add the durable trigger and ownership rule**
+- [x] **Step 4: Add the durable trigger and ownership rule**
 
 Append this section to `AGENTS.md` before `Harness Independence`:
 
@@ -320,7 +320,7 @@ Append this section to `AGENTS.md` before `Harness Independence`:
 - Skip the workflow for typos, one-line fixes, and other trivial changes.
 ```
 
-- [ ] **Step 5: Run workflow and full source tests and verify GREEN**
+- [x] **Step 5: Run workflow and full source tests and verify GREEN**
 
 Run:
 
@@ -330,7 +330,7 @@ uv run python -m unittest tests.test_sources -v
 
 Expected: PASS, including the new workflow contract.
 
-- [ ] **Step 6: Commit the workflow layer**
+- [x] **Step 6: Commit the workflow layer**
 
 ```bash
 git add tests/test_sources.py sources/skills/feature-delivery AGENTS.md
@@ -349,7 +349,7 @@ git commit -m "feat: add feature delivery workflow"
 - Modify: `sources/skills/feature-delivery/SKILL.md`
 - Modify: `AGENTS.md`
 
-- [ ] **Step 1: Write the failing visibility contract test**
+- [x] **Step 1: Write the failing visibility contract test**
 
 Extend the agent role test to require non-empty unique `nickname_candidates` for every managed agent. Require singleton `Planner` and `Scanner` names and numbered `Developer 1`, `Reviewer 1`, and `Verifier 1` names.
 
@@ -371,7 +371,7 @@ Extend `test_feature_delivery_skill_contract` with these exact portable display 
             self.assertIn(phrase, text)
 ```
 
-- [ ] **Step 2: Run the focused tests and verify RED**
+- [x] **Step 2: Run the focused tests and verify RED**
 
 Run:
 
@@ -381,7 +381,7 @@ uv run python -m unittest tests.test_sources.SourceContractTests.test_agents_hav
 
 Expected: FAIL because nickname candidates and the visibility contract are absent.
 
-- [ ] **Step 3: Add nickname candidates and the portable badge contract**
+- [x] **Step 3: Add nickname candidates and the portable badge contract**
 
 Add nickname candidates to the five agent TOML files:
 
@@ -399,7 +399,7 @@ Add a `Visibility Contract` section to the feature-delivery skill. Require the r
 
 Add a concise `AGENTS.md` rule requiring the root-assigned portable role/task label on every subagent dispatch and status summary.
 
-- [ ] **Step 4: Run the source and harness tests and verify GREEN**
+- [x] **Step 4: Run the source and harness tests and verify GREEN**
 
 Run:
 
@@ -410,7 +410,7 @@ git diff --check
 
 Expected: PASS with all role names and badge strings covered.
 
-- [ ] **Step 5: Commit the visibility layer**
+- [x] **Step 5: Commit the visibility layer**
 
 ```bash
 git add tests/test_sources.py sources/agents sources/skills/feature-delivery/SKILL.md AGENTS.md
@@ -427,7 +427,7 @@ git commit -m "feat: expose subagent role badges"
 - Modify: `docs/operations.md`
 - Modify: `docs/sources.md`
 
-- [ ] **Step 1: Write the failing documentation contract test**
+- [x] **Step 1: Write the failing documentation contract test**
 
 Add this test to `tests/test_sources.py`:
 
@@ -451,7 +451,7 @@ Add this test to `tests/test_sources.py`:
         self.assertIn("commit과 push", operations)
 ```
 
-- [ ] **Step 2: Run the documentation test and verify RED**
+- [x] **Step 2: Run the documentation test and verify RED**
 
 Run:
 
@@ -461,7 +461,7 @@ uv run python -m unittest tests.test_sources.SourceContractTests.test_operator_d
 
 Expected: FAIL because the operator documents do not mention the new workflow.
 
-- [ ] **Step 3: Update README and architecture documentation**
+- [x] **Step 3: Update README and architecture documentation**
 
 Add a `Feature delivery workflow` section to `README.md` with `$feature-delivery`, the seven-stage summary, trivial-change exclusion, and a link to the user guide.
 
@@ -473,7 +473,7 @@ planner/scanner -> root plan gate -> developer -> reviewer/verifier -> root inte
 
 State that planner/scanner/reviewer/verifier are read-only, developer is workspace-write, the root owns final authority, and parallel developers require separate worktrees.
 
-- [ ] **Step 4: Update user and operator guidance**
+- [x] **Step 4: Update user and operator guidance**
 
 In `docs/user-guide.md`, add `기능 전달 워크플로` before `네이티브 병렬 리뷰`. Include:
 
@@ -488,7 +488,7 @@ In `docs/operations.md`, add invocation, health inspection, `codex-harness skill
 
 In `docs/sources.md`, add `feature-delivery` to the local adaptations derived from the official Subagents guidance.
 
-- [ ] **Step 5: Run the documentation and source contracts and verify GREEN**
+- [x] **Step 5: Run the documentation and source contracts and verify GREEN**
 
 Run:
 
@@ -498,7 +498,7 @@ uv run python -m unittest tests.test_sources -v
 
 Expected: PASS with every operator document covering the workflow.
 
-- [ ] **Step 6: Commit the documentation layer**
+- [x] **Step 6: Commit the documentation layer**
 
 ```bash
 git add tests/test_sources.py README.md docs/architecture.md docs/user-guide.md docs/operations.md docs/sources.md
@@ -510,7 +510,7 @@ git commit -m "docs: document feature delivery operation"
 **Files:**
 - Modify: `docs/superpowers/plans/2026-07-20-feature-delivery.md`
 
-- [ ] **Step 1: Run the full repository suite**
+- [x] **Step 1: Run the full repository suite**
 
 Run:
 
@@ -521,7 +521,7 @@ git diff --check
 
 Expected: all tests pass and no whitespace errors.
 
-- [ ] **Step 2: Smoke the new assets in an isolated home**
+- [x] **Step 2: Smoke the new assets in an isolated home**
 
 Run each command from the feature worktree using the same `HARNESS_SMOKE_HOME` value:
 
@@ -536,7 +536,7 @@ env HOME="$HARNESS_SMOKE_HOME" CODEX_HOME="$HARNESS_SMOKE_HOME/.codex" ./bin/cod
 
 Expected: plan includes `agent-planner`, `agent-developer`, and `skill-feature-delivery`; apply succeeds; skill status is `current` and effectively enabled; doctor reports `healthy`.
 
-- [ ] **Step 3: Exercise the local feature-delivery toggle**
+- [x] **Step 3: Exercise the local feature-delivery toggle**
 
 Run with the same isolated home:
 
@@ -549,7 +549,7 @@ env HOME="$HARNESS_SMOKE_HOME" CODEX_HOME="$HARNESS_SMOKE_HOME/.codex" ./bin/cod
 
 Expected: disable reports an intentional healthy disabled state; reset removes the local override; the final plan has no changes.
 
-- [ ] **Step 4: Review final scope and record completion**
+- [x] **Step 4: Review final scope and record completion**
 
 Run:
 
@@ -563,7 +563,7 @@ Expected: every changed implementation line traces to the approved feature-deliv
 
 Mark completed plan steps with `[x]`, then run `git diff --check`.
 
-- [ ] **Step 5: Commit the completed verification record**
+- [x] **Step 5: Commit the completed verification record**
 
 ```bash
 git add docs/superpowers/plans/2026-07-20-feature-delivery.md
