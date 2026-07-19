@@ -1,0 +1,16 @@
+prefix_rule(
+    pattern = ["codex-harness", ["plan", "status", "inventory", "list", "version", "doctor"]],
+    decision = "allow",
+    justification = "These Codex harness commands are read-only health and inventory checks.",
+    match = [
+        "codex-harness plan",
+        "codex-harness status --json",
+        "codex-harness inventory",
+        "codex-harness doctor",
+    ],
+    not_match = [
+        "codex-harness apply",
+        "codex-harness restore latest",
+        "codex-harness unlink",
+    ],
+)

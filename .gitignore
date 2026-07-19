@@ -1,1 +1,8 @@
 .worktrees/
+__pycache__/
+*.pyc
+.codex-loop/
+.coverage
+sources/config/hosts/*.local.toml
+!sources/config/hosts/default.toml
+!sources/config/hosts/rock.toml

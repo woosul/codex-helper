@@ -1,0 +1,77 @@
+schema_version = 1
+harness_version = "0.1.0"
+minimum_codex_version = "0.144.5"
+
+[paths]
+codex_home = "${CODEX_HOME:-$HOME/.codex}"
+user_skills = "$HOME/.agents/skills"
+user_bin = "$HOME/.local/bin"
+
+[config]
+base = "sources/config/base.toml"
+host_dir = "sources/config/hosts"
+state = "${CODEX_HOME:-$HOME/.codex}/.codex-helper/state.json"
+backups = "${CODEX_HOME:-$HOME/.codex}/backups/codex-helper"
+
+[[assets]]
+id = "global-agents"
+kind = "symlink"
+category = "guidance"
+source = "AGENTS.md"
+target = "${CODEX_HOME:-$HOME/.codex}/AGENTS.md"
+scope = "global"
+version = "1.0.0"
+
+[[assets]]
+id = "agent-scanner"
+kind = "symlink"
+category = "agents"
+source = "sources/agents/scanner.toml"
+target = "${CODEX_HOME:-$HOME/.codex}/agents/scanner.toml"
+scope = "global"
+version = "1.0.0"
+
+[[assets]]
+id = "agent-reviewer"
+kind = "symlink"
+category = "agents"
+source = "sources/agents/reviewer.toml"
+target = "${CODEX_HOME:-$HOME/.codex}/agents/reviewer.toml"
+scope = "global"
+version = "1.0.0"
+
+[[assets]]
+id = "agent-verifier"
+kind = "symlink"
+category = "agents"
+source = "sources/agents/verifier.toml"
+target = "${CODEX_HOME:-$HOME/.codex}/agents/verifier.toml"
+scope = "global"
+version = "1.0.0"
+
+[[assets]]
+id = "profile-deep-review"
+kind = "symlink"
+category = "profiles"
+source = "sources/profiles/deep-review.config.toml"
+target = "${CODEX_HOME:-$HOME/.codex}/deep-review.config.toml"
+scope = "global"
+version = "1.0.0"
+
+[[assets]]
+id = "profile-fast-scan"
+kind = "symlink"
+category = "profiles"
+source = "sources/profiles/fast-scan.config.toml"
+target = "${CODEX_HOME:-$HOME/.codex}/fast-scan.config.toml"
+scope = "global"
+version = "1.0.0"
+
+[[assets]]
+id = "rules-codex-helper"
+kind = "symlink"
+category = "rules"
+source = "sources/rules/codex-helper.rules"
+target = "${CODEX_HOME:-$HOME/.codex}/rules/codex-helper.rules"
+scope = "global"
+version = "1.0.0"
