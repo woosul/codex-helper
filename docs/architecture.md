@@ -16,11 +16,15 @@ Before replacing or removing a declared target, the harness creates a timestampe
 
 Authentication, sessions, logs, caches, databases, plugins, marketplaces, projects, desktop/UI state, the runtime default rule file, and undeclared skills are outside manifest ownership. Snapshot, apply, restore, and unlink do not enumerate or copy those areas.
 
-## Review workflows
+## Agent workflows
 
 `parallel-review` coordinates bounded native scanner, reviewer, and verifier roles for independent read-heavy concerns. The root agent retains final judgment and all write authority.
 
 `dual-loop-review` first requires fresh local evidence, then invokes a separate ephemeral Codex process in a read-only sandbox with a structured verdict. It permits at most three cycles.
+
+`feature-delivery` evolves this into a delivery workflow: planner/scanner → root plan gate → developer → reviewer/verifier → root integration. Planner, scanner, reviewer, and verifier are read-only; the developer profile defaults to `workspace-write`, while actual edits remain bounded by the parent, user, and system permission boundary. The root owns workflow decisions, execution, and integration, including commits and pushes when user/system authorization permits. Its default playbook is Subagent-Driven and root-reconfigurable for a task through an inline override, but delegated roles do not re-enter the workflow.
+
+Only one developer writes in a checkout. Parallel developers receive separate worktrees. The root owns monotonic `role instance - task name` activity labels for each spawned thread; a follow-up in the same thread reuses that label number. This makes the portable role/task label stable even when a Codex client does not render native badges.
 
 ## Independence boundary
 

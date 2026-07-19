@@ -43,6 +43,24 @@ codex-harness skill reset parallel-review
 
 `skill reset` removes the local override and reconciles the link to the manifest default. Toggle commands never replace a foreign file, directory, or link. Start a new Codex task after a state change so skill discovery uses the new link set.
 
+## Feature-delivery operation
+
+Invoke `$feature-delivery` from a persistent parent/root task, then check health with `codex-harness skill status feature-delivery --json` and `codex-harness doctor --json`. The parent must remain active until every delegated role returns; do not start this workflow from an ephemeral task.
+
+The root assigns and reports each `role instance - task name` label, allocates repeatable-role numbers monotonically, and reuses a number only for a same-thread follow-up. Planner, scanner, reviewer, and verifier remain read-only; the developer profile defaults to `workspace-write`, but actual edits remain bounded by the parent/user/system permission boundary. The root owns scope and integration; commits and pushes remain root responsibilities subject to user/system authorization.
+
+Native badge width and ellipsis are client-owned, with no harness configuration. A nickname or native badge may truncate, so the root keeps the full label in dispatch, progress, and completion body text.
+
+For a machine-local change, use the normal safe toggle commands:
+
+```bash
+codex-harness skill disable feature-delivery
+codex-harness skill enable feature-delivery
+codex-harness skill reset feature-delivery
+```
+
+Each toggle changes the local preference and managed link only when safe. Start a new Codex task after toggling because an already-open task can retain loaded skill instructions.
+
 ## Snapshots and recovery
 
 Create a receipt before manual maintenance:

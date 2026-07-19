@@ -250,6 +250,53 @@ class SourceContractTests(unittest.TestCase):
         self.assertIn("local override", guide)
         self.assertIn("skill reset", operations)
 
+    def test_operator_docs_cover_feature_delivery(self):
+        documents = {
+            "README.md": (ROOT / "README.md").read_text(),
+            "docs/architecture.md": (ROOT / "docs/architecture.md").read_text(),
+            "docs/user-guide.md": (ROOT / "docs/user-guide.md").read_text(),
+            "docs/operations.md": (ROOT / "docs/operations.md").read_text(),
+            "docs/sources.md": (ROOT / "docs/sources.md").read_text(),
+        }
+        for document, text in documents.items():
+            with self.subTest(document=document):
+                self.assertIn("feature-delivery", text)
+
+        guide = documents["docs/user-guide.md"]
+        for phrase in (
+            "planner",
+            "developer",
+            "기본 Subagent-Driven",
+            "인라인 override",
+            "별도 worktree",
+            "기본 세 번",
+            "workspace-write",
+            "사용자/시스템 권한 경계",
+            "커밋과 푸시",
+            "말줄임",
+            "client-owned",
+            "본문 label",
+            "developer 1 - implement role badges",
+            "reviewer 2 - review role quality",
+        ):
+            self.assertIn(phrase, guide)
+
+        operations = documents["docs/operations.md"]
+        for phrase in (
+            "codex-harness skill disable feature-delivery",
+            "codex-harness skill enable feature-delivery",
+            "codex-harness skill reset feature-delivery",
+            "parent/user/system permission boundary",
+            "workspace-write",
+            "commits and pushes",
+            "user/system authorization",
+            "native badge",
+            "client-owned",
+            "full label",
+            "role instance - task name",
+        ):
+            self.assertIn(phrase, operations)
+
     def test_docs_define_safe_update_sequence(self):
         text = (ROOT / "docs/operations.md").read_text()
         sequence = ["git pull --ff-only", "codex-harness plan", "codex-harness apply", "codex-harness doctor"]

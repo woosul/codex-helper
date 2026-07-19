@@ -47,6 +47,12 @@ Global options such as `--host rock` precede the command. Add `--json` where sup
 
 This repository does not own Codex authentication, sessions, logs, caches, databases, plugins, marketplaces, projects, desktop/UI state, `rules/default.rules`, or undeclared skills. Those remain runtime- or user-owned and are preserved.
 
+## Feature delivery workflow
+
+Use `$feature-delivery` for a non-trivial feature, ambiguous multi-file change, or an explicitly requested multi-agent delivery. The default flow is planner/scanner → root plan gate → developer → reviewer/verifier → root integration, using Subagent-Driven execution. The root can use a task-scoped inline override, while trivial edits stay outside this workflow.
+
+One developer writes in one checkout; multiple developers use separate worktrees. The developer profile defaults to `workspace-write`, but actual edits remain bounded by the parent, user, and system permission boundary. The root owns the portable `role instance - task name` activity label, such as `developer 1 - implement role badges`, and owns integration plus commits and pushes when user/system authorization permits. See the [user guide](docs/user-guide.md#기능-전달-워크플로) for operating details.
+
 ## Documentation
 
 - [Architecture](docs/architecture.md)

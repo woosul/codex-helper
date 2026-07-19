@@ -44,6 +44,16 @@ codex-harness doctor
 
 ## 제공 워크플로
 
+### 기능 전달 워크플로
+
+비사소한 기능, 여러 파일에 걸친 모호한 변경, 또는 명시적인 다중 에이전트 전달 요청에는 `$feature-delivery`를 사용한다. 기본 흐름은 planner/scanner → root plan gate → developer → reviewer/verifier → root integration이다.
+
+실행 전략을 따로 지정하지 않으면 **기본 Subagent-Driven**으로 동작한다. 루트는 작업 범위의 **인라인 override**로 실행 모드, 역할, 순서, 수정 루프를 추가·제거·재정렬·생략할 수 있다. 다만 위임된 역할은 이 워크플로에 다시 진입하지 않는다. 사소한 편집은 이 협업 비용이 더 크므로 제외한다.
+
+개발자는 한 checkout에서 한 명만 쓰며, 여러 개발자가 필요하면 각각 **별도 worktree**를 사용한다. developer 프로필의 기본값은 `workspace-write`이지만 실제 편집은 부모 작업과 **사용자/시스템 권한 경계** 안에서만 가능하다. 수정 루프는 **기본 세 번**이고 루트가 조정할 수 있다. 최종 통합과 **커밋과 푸시**는 루트 책임이지만 사용자/시스템 권한이 허용할 때만 수행한다.
+
+활동 표시는 루트가 `role instance - task name` 형식으로 부여한다. 예: `developer 1 - implement role badges`, `reviewer 2 - review role quality`. 반복 역할 번호는 새 스레드마다 단조 증가하며, 동일 스레드에 follow-up을 보낼 때만 기존 번호를 재사용한다. native badge의 폭과 **말줄임**은 **client-owned**이므로 하네스가 설정할 수 없으며, 루트는 전체 **본문 label**을 dispatch·progress·completion 본문에 유지한다.
+
 ### 네이티브 병렬 리뷰
 
 Codex 앱 또는 대화형 CLI 작업에서 `$parallel-review`를 명시적으로 호출한다. scanner, reviewer, verifier가 독립적인 read-only 관점을 반환하고 루트 에이전트가 증거를 재확인해 통합한다.
