@@ -50,12 +50,25 @@ class SourceContractTests(unittest.TestCase):
             "reviewer": "read-only",
             "verifier": "read-only",
         }
+        expected_nicknames = {
+            "scanner": ["Scanner"],
+            "planner": ["Planner"],
+            "developer": ["Developer 1", "Developer 2", "Developer 3"],
+            "reviewer": ["Reviewer 1", "Reviewer 2", "Reviewer 3"],
+            "verifier": ["Verifier 1", "Verifier 2", "Verifier 3"],
+        }
         for name, sandbox_mode in expected_modes.items():
             data = tomllib.loads((ROOT / f"sources/agents/{name}.toml").read_text())
             self.assertEqual(name, data["name"])
             self.assertEqual(sandbox_mode, data["sandbox_mode"])
             self.assertTrue(data["description"])
             self.assertTrue(data["developer_instructions"])
+            self.assertIsInstance(data.get("nickname_candidates"), list)
+            self.assertTrue(data["nickname_candidates"])
+            self.assertEqual(
+                len(data["nickname_candidates"]), len(set(data["nickname_candidates"]))
+            )
+            self.assertEqual(expected_nicknames[name], data["nickname_candidates"])
 
         planner = tomllib.loads((ROOT / "sources/agents/planner.toml").read_text())
         developer = tomllib.loads((ROOT / "sources/agents/developer.toml").read_text())
@@ -150,6 +163,16 @@ class SourceContractTests(unittest.TestCase):
             "When dispatched as a role within an active feature-delivery workflow",
             "do not re-enter this workflow",
             "Return validated findings to the developer as a narrower assignment",
+            "planner - plan feature delivery",
+            "developer 1 - implement role badges",
+            "reviewer 1 - review role spec",
+            "reviewer 2 - review role quality",
+            "verifier 1 - verify acceptance criteria",
+            "reviewer_2__review_role_quality",
+            "increase monotonically",
+            "never recycled",
+            "follow-up to the same agent thread reuses its number",
+            "Subagents echo the assigned label and never allocate numbers",
         ):
             self.assertIn(phrase, text)
 
@@ -161,6 +184,10 @@ class SourceContractTests(unittest.TestCase):
         self.assertIn("non-trivial feature", guidance)
         self.assertIn("delegated role", guidance)
         self.assertIn("do not re-enter", guidance)
+        self.assertIn("coordinating root", guidance)
+        self.assertIn("role instance - task name", guidance)
+        self.assertIn("monotonically", guidance)
+        self.assertIn("same-thread", guidance)
 
     def test_manifest_sources_exist(self):
         data = tomllib.loads((ROOT / "manifest.toml").read_text())

@@ -26,6 +26,18 @@ Use **Subagent-Driven by default** when the task does not select an execution st
 
 Every assignment supplies: the objective, acceptance criteria, owned paths, excluded paths, relevant constraints, the expected tests or checks, and the required response format. Each response summarizes changed paths or inspected evidence, commands run with outcomes, findings, unresolved ambiguity, and any scope concern. The root rechecks evidence before relying on it.
 
+## Visibility Contract
+
+The coordinating root assigns a label and tool task ID in every handoff. Labels use `role instance - task name`, with a meaningful verb-object task name rather than redundant internal wording such as `role badge spec`. Keep the same label on dispatch, progress, and completion.
+
+- `planner - plan feature delivery`
+- `developer 1 - implement role badges`
+- `reviewer 1 - review role spec`
+- `reviewer 2 - review role quality`
+- `verifier 1 - verify acceptance criteria`
+
+Repeatable-role numbers increase monotonically for each distinct spawned thread during the workflow and are never recycled, including serial replacements and new correction-cycle threads. Only a follow-up to the same agent thread reuses its number. Tool task IDs mirror the label with underscores, for example `reviewer_2__review_role_quality`. Subagents echo the assigned label and never allocate numbers. Labels are the portable fallback when client UI or nickname display differs.
+
 ## Boundaries
 
 - Return material ambiguity to the root for resolution; do not guess or expand scope.

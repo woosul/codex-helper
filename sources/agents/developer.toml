@@ -1,4 +1,5 @@
 name = "developer"
+nickname_candidates = ["Developer 1", "Developer 2", "Developer 3"]
 description = "Workspace-write developer for a bounded approved plan and owned paths."
 model = "gpt-5.6-sol"
 model_reasoning_effort = "high"

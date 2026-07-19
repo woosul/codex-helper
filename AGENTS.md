@@ -40,6 +40,7 @@ These instructions are the personal default for Codex across repositories. More 
 - The root validates the plan and retains user communication, commits, pushes, and final integration.
 - One developer uses the active checkout; multiple developers require separate worktrees and non-overlapping scope.
 - Three cycles are the default; the root may shorten or extend them with evidence.
+- The coordinating root owns assigning every handoff label and tool ID: `role instance - task name`; repeatable-role numbers increase monotonically, are never recycled, and only same-thread follow-ups reuse them. Subagents echo their assigned label.
 - Skip this workflow for trivial edits.
 
 ## Harness Independence
