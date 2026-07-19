@@ -1,12 +1,12 @@
 # Codex Harness Meta Repository Design
 
 **Date:** 2026-07-19  
-**Status:** Approved design  
+**Status:** Approved direction; revision pending review
 **Scope:** Personal, cross-machine Codex CLI and desktop harness management
 
 ## 1. Intent
 
-Turn `codex-helper` into the source repository for Denny's Codex harness without coupling it to `claude-harness-helper`. The Claude repository remains a read-only reference and continues operating independently.
+Turn `codex-helper` into the sole source repository for Denny's Codex harness. A separate Claude harness may inform the one-time migration, but it is not a runtime, maintenance, documentation, or symlink dependency. After migration succeeds, Codex must not read, search, diff, execute, or modify that sibling repository.
 
 The Codex harness must make a new machine easy to connect, keep static global guidance and reusable capabilities under Git, preserve Codex-owned runtime state, and make drift visible before it becomes a broken setup.
 
@@ -42,15 +42,15 @@ The design deliberately follows Codex's native extension surfaces:
 | AC-05 | Managed config additions, updates, and deletions are reflected in live config without deleting unmanaged keys. | Merge tests cover new key, changed key, removed formerly managed key, nested table, and array-of-table values. |
 | AC-06 | Every operation that replaces or removes an existing entry or modifies live config creates a recoverable backup and uses atomic replacement. | Failure-injection test leaves the previous live state intact; restore test recovers the fixture. |
 | AC-07 | Inventory and status commands report harness revision, host overlay, managed assets, source/version metadata, drift, broken links, and unmanaged entries. | CLI snapshot tests and exit-code tests pass. |
-| AC-08 | The global `AGENTS.md` contains all four Karpathy principles and fresh-evidence completion policy. | Guidance contract test checks the four canonical headings and verification language. |
+| AC-08 | The tracked root `AGENTS.md` is the global guidance source and contains all four Karpathy principles, fresh-evidence completion policy, and the harness-independence boundary. | Guidance contract test checks the canonical headings and `~/.codex/AGENTS.md` resolves to the repository root file. |
 | AC-09 | Parallel review uses bounded, read-heavy native subagents and keeps final judgment with the root agent. | Skill/agent contract tests plus one opt-in smoke run. |
 | AC-10 | External review runs in a fresh, ephemeral, read-only Codex process with a bounded cycle count and structured verdict. | Stub-runner unit test plus one opt-in live smoke run. |
-| AC-11 | `claude-harness-helper` is not modified. | Pre/post `git -C ~/Project/claude-harness-helper status --short` output is unchanged. |
+| AC-11 | After migration, all active managed links and configuration are self-contained and no operational command consults the sibling Claude harness. | `doctor` proves every managed source resolves inside `codex-helper`; operational-source scan reports no sibling-repository path dependency. |
 
 ## 3. Non-goals
 
 - Do not replace `CODEX_HOME` with the repository. Authentication, sessions, logs, caches, SQLite databases, downloaded plugins, and app state remain runtime-owned.
-- Do not reproduce the Claude repository's multi-version `current -> versions/V*` architecture. Git commits and tags version the Codex harness; manifest entries version individual external sources.
+- Do not reproduce another harness's multi-version `current -> versions/V*` architecture. Git commits and tags version the Codex harness; manifest entries version individual external sources.
 - Do not copy Claude-specific models, panels, hooks, commands, or orchestration policy.
 - Do not take ownership of every pre-existing skill on the machine. Only manifest-declared assets are managed.
 - Do not install an unbounded autonomous coding loop or use `--dangerously-bypass-approvals-and-sandbox`.
@@ -67,8 +67,6 @@ codex-helper/
 ├── install.sh
 ├── manifest.toml
 ├── sources/
-│   ├── guidance/
-│   │   └── AGENTS.md
 │   ├── config/
 │   │   ├── base.toml
 │   │   └── hosts/
@@ -124,7 +122,7 @@ Each file has one responsibility:
 
 | Live target | Repository source |
 |---|---|
-| `~/.codex/AGENTS.md` | `sources/guidance/AGENTS.md` |
+| `~/.codex/AGENTS.md` | `AGENTS.md` |
 | `~/.codex/agents/scanner.toml` | `sources/agents/scanner.toml` |
 | `~/.codex/agents/reviewer.toml` | `sources/agents/reviewer.toml` |
 | `~/.codex/agents/verifier.toml` | `sources/agents/verifier.toml` |
@@ -235,7 +233,7 @@ The harness does not run `git pull` itself. This keeps repository updates separa
 
 ## 5. Global guidance: Karpathy four principles
 
-`sources/guidance/AGENTS.md` is the concise always-on policy and contains:
+The tracked root `AGENTS.md` is both this repository's project guidance and the canonical global source linked at `~/.codex/AGENTS.md`. It contains:
 
 1. **Think Before Coding** — state assumptions, expose ambiguity, present meaningful trade-offs, and stop when an unresolved choice would materially change the result.
 2. **Simplicity First** — implement the smallest solution that satisfies the request; no speculative abstractions, options, or edge-case machinery.
@@ -248,8 +246,9 @@ Codex-specific additions remain short:
 - Parallelize independent read-heavy work; coordinate writes through the root agent or isolated worktrees.
 - Do not claim completion without fresh test/build/behavior evidence.
 - Prefer global `AGENTS.md` for durable behavior, skills for reusable workflows, agents for bounded roles, and rules for command policy.
+- Treat `codex-helper` as the only Codex harness source after migration; never inspect or invoke the sibling Claude harness repository.
 
-The file contains no Claude model names, Claude panel topology, or paths back to `claude-harness-helper`.
+The file contains no Claude model names, Claude panel topology, absolute sibling-repository path, or instructions that require the sibling repository. This boundary applies to future Codex sessions even when historical comparison appears convenient.
 
 ## 6. Installed workflow samples
 
@@ -379,7 +378,7 @@ Verification sequence:
 4. `plan` against the real home and manual review of every proposed target.
 5. `snapshot`, then `apply` with required filesystem approval.
 6. Fresh `status`, `inventory`, `doctor`, and second `plan` proving no drift.
-7. Confirm `claude-harness-helper` Git status is unchanged.
+7. Confirm every active managed target resolves inside `codex-helper`, then enable the permanent no-inspection boundary for future sessions.
 
 Live model calls are opt-in tests because they consume usage. One final smoke test runs native subagent review, and one runs the external reviewer on a harmless fixture repository.
 
@@ -387,7 +386,7 @@ Live model calls are opt-in tests because they consume usage. One final smoke te
 
 The current observed state includes:
 
-- `~/.codex/AGENTS.md` linked to `claude-harness-helper/common/AGENTS-rock.md`.
+- `~/.codex/AGENTS.md` linked outside this repository to the legacy global guidance source.
 - `~/.codex/config.toml` as a real file with user preferences plus Codex-managed plugin, marketplace, project, desktop, and UI state.
 - `~/.codex/rules/default.rules` as a real runtime-managed file.
 - A mixture of real directories and external links under existing skill locations.
@@ -395,12 +394,12 @@ The current observed state includes:
 
 Migration steps:
 
-1. Copy and adapt only the Karpathy four principles into the Codex-owned global guidance source.
+1. Create and track the root `AGENTS.md`, adapting only the Karpathy four principles plus concise Codex-native and harness-independence guidance.
 2. Extract stable user preferences into `base.toml` and machine-specific, non-secret MCP/path settings into `hosts/rock.toml`.
 3. Leave runtime catalogs and all undeclared files unowned.
 4. Add only the two new sample skills and three custom agents to the manifest.
 5. Preview the replacement of the existing global `AGENTS.md` link and preserve its previous destination in the backup receipt.
-6. Apply and verify without writing to the Claude repository.
+6. Apply the new root `AGENTS.md` link and verify the self-contained Codex setup. After that verification, no later command, test, status check, or maintenance workflow may inspect the sibling Claude harness.
 
 ## 12. Rejected alternatives
 
@@ -432,4 +431,12 @@ Rejected for the initial harness because unattended write loops compound failure
 - OpenAI, [Rules](https://learn.chatgpt.com/docs/agent-configuration/rules)
 - Phil Schmid, [Agents: Inner Loop vs Outer Loop](https://www.philschmid.de/inner-loop-vs-outer-loop)
 - snarktank, [Ralph](https://github.com/snarktank/ralph)
-- Read-only local reference: `~/Project/claude-harness-helper`
+
+## 14. Ordered follow-up research
+
+Only after AC-01 through AC-11 pass on the real machine:
+
+1. Research how Codex should use external review-only agents for plan and implementation review. Start with current official Codex documentation, then compare primary community implementations. Do not use the sibling Claude harness as a source.
+2. After the external-agent report, discover and recommend skills for specification-driven development (SDD) and test-driven development (TDD). Evaluate trigger quality, maintenance activity, license, Codex compatibility, and overlap with the installed dual-loop workflow before recommending installation.
+
+These are follow-up research deliverables, not prerequisites for the initial harness implementation or permission to install additional third-party code.
