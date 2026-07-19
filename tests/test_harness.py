@@ -147,6 +147,19 @@ class HarnessTests(unittest.TestCase):
         self.assertEqual(ROOT / "bin/codex-harness", (self.home / ".local/bin/codex-harness").resolve())
         self.assertEqual(ROOT / "bin/codex-external-review", (self.home / ".local/bin/codex-external-review").resolve())
 
+    def test_installed_harness_utility_executes_through_symlink(self):
+        self.run_cli("apply", "--yes")
+        installed = self.home / ".local/bin/codex-harness"
+        result = subprocess.run(
+            [str(installed), "version", "--json"],
+            cwd=self.home,
+            env=self.env,
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("0.1.0", json.loads(result.stdout)["harness_version"])
+
     def test_doctor_passes_for_sources_and_applied_temp_home(self):
         self.run_cli("apply", "--yes")
         result = self.run_cli("doctor", "--json")
