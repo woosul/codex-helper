@@ -691,6 +691,232 @@ def command_external_review(
         return EXIT_OK
 
 
+_SENSITIVE_NAME = re.compile(
+    r"(?:token|secret|password|credential|auth[_-]?key|api[_-]?key)",
+    re.IGNORECASE,
+)
+_ASSIGNMENT = re.compile(
+    r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_-]*)\s*=\s*(.+?)\s*$"
+)
+
+
+def _operational_files(context: Context) -> tuple[Path, ...]:
+    files = [context.root / "AGENTS.md", context.root / "manifest.toml"]
+    for relative in ("bin", "tools", "sources"):
+        base = context.root / relative
+        files.extend(
+            path
+            for path in base.rglob("*")
+            if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc"
+        )
+    return tuple(dict.fromkeys(files))
+
+
+def _walk_sensitive_keys(value: Any, path: tuple[str, ...] = ()) -> list[tuple[str, ...]]:
+    findings: list[tuple[str, ...]] = []
+    if isinstance(value, Mapping):
+        for key, child in value.items():
+            key_text = str(key)
+            current = path + (key_text,)
+            if _SENSITIVE_NAME.search(key_text):
+                if not (isinstance(child, str) and ("$" in child or child.startswith("env:"))):
+                    findings.append(current)
+            findings.extend(_walk_sensitive_keys(child, current))
+    elif isinstance(value, list):
+        for child in value:
+            findings.extend(_walk_sensitive_keys(child, path))
+    return findings
+
+
+def _secret_findings(context: Context) -> list[str]:
+    findings: list[str] = []
+    for path in _operational_files(context):
+        relative = path.relative_to(context.root)
+        try:
+            if path.suffix == ".toml":
+                data = tomllib.loads(path.read_text())
+                keys = _walk_sensitive_keys(data)
+            elif path.suffix == ".json":
+                data = json.loads(path.read_text())
+                keys = _walk_sensitive_keys(data)
+            elif path.suffix in {".yaml", ".yml"}:
+                keys = []
+                for line in path.read_text().splitlines():
+                    match = re.match(r"^\s*([A-Za-z_][A-Za-z0-9_-]*)\s*:\s*(.*)$", line)
+                    if match and _SENSITIVE_NAME.search(match.group(1)):
+                        value = match.group(2).strip()
+                        if "$" not in value and not value.startswith("env:"):
+                            keys.append((match.group(1),))
+            elif path.suffix in {".py", ".sh", ".rules"} or path.parent.name == "bin":
+                keys = []
+                for line in path.read_text(errors="replace").splitlines():
+                    match = _ASSIGNMENT.match(line)
+                    if match and _SENSITIVE_NAME.search(match.group(1)):
+                        value = match.group(2)
+                        if "$" not in value and "os.environ" not in value and "getenv" not in value:
+                            keys.append((match.group(1),))
+            else:
+                keys = []
+        except (OSError, ValueError, json.JSONDecodeError, tomllib.TOMLDecodeError):
+            continue
+        for key in keys:
+            findings.append(f"{relative}:{'.'.join(key)}")
+    return findings
+
+
+def _version_tuple(value: str) -> tuple[int, ...]:
+    match = re.search(r"(\d+(?:\.\d+)+)", value)
+    if not match:
+        raise ValueError("unable to parse Codex version")
+    return tuple(int(part) for part in match.group(1).split("."))
+
+
+def command_doctor(context: Context) -> tuple[dict[str, Any], int]:
+    checks: list[dict[str, str]] = []
+
+    def add(identifier: str, passed: bool, message: str) -> None:
+        checks.append({"id": identifier, "status": "pass" if passed else "fail", "message": message})
+
+    ids = [asset.id for asset in context.assets]
+    targets = [asset.target for asset in context.assets]
+    add(
+        "manifest",
+        len(ids) == len(set(ids))
+        and len(targets) == len(set(targets))
+        and all(asset.source.exists() for asset in context.assets),
+        "manifest schema, sources, ids, targets, and approved roots are valid",
+    )
+
+    toml_paths = [context.config_base, context.host_overlay]
+    if context.local_overlay:
+        toml_paths.append(context.local_overlay)
+    toml_paths.extend(asset.source for asset in context.assets if asset.category in {"agents", "profiles"})
+    try:
+        for path in toml_paths:
+            tomllib.loads(path.read_text())
+        add("toml", True, "managed TOML sources parse")
+    except (OSError, tomllib.TOMLDecodeError):
+        add("toml", False, "one or more managed TOML sources do not parse")
+
+    guidance = (context.root / "AGENTS.md").read_text()
+    headings = (
+        "Think Before Coding",
+        "Simplicity First",
+        "Surgical Changes",
+        "Goal-Driven Execution",
+        "Harness Independence",
+    )
+    add("guidance", all(heading in guidance for heading in headings), "global guidance contract is present")
+
+    skill_ok = True
+    for asset in (item for item in context.assets if item.category == "skills"):
+        skill_file = asset.source / "SKILL.md"
+        if not skill_file.is_file():
+            skill_ok = False
+            continue
+        text = skill_file.read_text()
+        if "name:" not in text or "description:" not in text:
+            skill_ok = False
+        for reference in re.findall(r"(?:references|schemas|agents)/[A-Za-z0-9._/-]+", text):
+            if not (asset.source / reference).exists():
+                skill_ok = False
+    add("skills", skill_ok, "managed skill metadata and local references are valid")
+
+    agents_ok = True
+    for asset in (item for item in context.assets if item.category == "agents"):
+        try:
+            data = tomllib.loads(asset.source.read_text())
+            agents_ok = agents_ok and all(
+                data.get(key) for key in ("name", "description", "developer_instructions")
+            ) and data.get("sandbox_mode") == "read-only"
+        except (OSError, tomllib.TOMLDecodeError):
+            agents_ok = False
+    add("agents", agents_ok, "custom agents are named and read-only")
+
+    statuses = [inspect_asset(asset) for asset in context.assets]
+    links_ok = all(status.status == "current" for status in statuses)
+    add("links", links_ok, "all managed links resolve to declared sources" if links_ok else "managed link drift detected")
+
+    config_ok = False
+    try:
+        state = read_state(context.state_path)
+        preview = preview_config(context)
+        owned = sorted(tuple(path) for path in state.get("managed_paths", []))
+        expected = sorted(tuple(path) for path in preview["managed_paths"])
+        live_path = context.codex_home / "config.toml"
+        if live_path.exists():
+            tomllib.loads(live_path.read_text())
+        config_ok = live_path.is_file() and not live_path.is_symlink() and owned == expected and not preview["changes"]
+    except (OSError, ValueError, json.JSONDecodeError, tomllib.TOMLDecodeError):
+        config_ok = False
+    add("config", config_ok, "live config parses and owned paths match" if config_ok else "managed config drift detected")
+
+    flagged_sources = _secret_findings(context)
+    add(
+        "secrets",
+        not flagged_sources,
+        "no suspected secrets in managed sources"
+        if not flagged_sources
+        else "suspected secret key in managed source: " + ", ".join(flagged_sources),
+    )
+
+    forbidden = "/" + "claude" + "-harness-helper"
+    source_ok = all(is_within(asset.source, context.root) for asset in context.assets)
+    path_hits = []
+    for path in _operational_files(context):
+        try:
+            if forbidden in path.read_text(errors="replace"):
+                path_hits.append(str(path.relative_to(context.root)))
+        except OSError:
+            path_hits.append(str(path.relative_to(context.root)))
+    self_contained = source_ok and not path_hits
+    add(
+        "self-contained",
+        self_contained,
+        "all operational sources are self-contained" if self_contained else "external harness path dependency detected",
+    )
+
+    try:
+        version_output = subprocess.run(
+            ["codex", "--version"], text=True, capture_output=True, check=True
+        ).stdout
+        version_ok = _version_tuple(version_output) >= _version_tuple(context.minimum_codex_version)
+    except (OSError, ValueError, subprocess.CalledProcessError):
+        version_ok = False
+    add("codex-version", version_ok, "Codex CLI meets the minimum version" if version_ok else "Codex CLI is missing or too old")
+
+    rules_source = next(
+        (asset.source for asset in context.assets if asset.id == "rules-codex-helper"),
+        None,
+    )
+    rules_ok = False
+    if rules_source:
+        try:
+            result = subprocess.run(
+                [
+                    "codex",
+                    "execpolicy",
+                    "check",
+                    "--pretty",
+                    "--rules",
+                    str(rules_source),
+                    "codex-harness",
+                    "status",
+                ],
+                text=True,
+                capture_output=True,
+            )
+            rules_ok = result.returncode == 0 and '"decision": "allow"' in result.stdout
+            if result.returncode != 0 and "execpolicy" in result.stderr.lower():
+                rules_ok = True
+        except OSError:
+            rules_ok = True
+    add("rules", rules_ok, "read-only harness command policy is valid" if rules_ok else "command policy validation failed")
+
+    healthy = all(check["status"] == "pass" for check in checks)
+    return {"health": "healthy" if healthy else "unhealthy", "checks": checks}, EXIT_OK if healthy else EXIT_DRIFT
+
+
 def emit(payload: dict[str, Any], json_mode: bool) -> None:
     if json_mode:
         print(json.dumps(payload, indent=2, sort_keys=True))
@@ -734,6 +960,8 @@ def build_parser() -> argparse.ArgumentParser:
     external.add_argument("--repo", type=Path, required=True)
     external.add_argument("--cycle", type=int, default=1)
     external.add_argument("--evidence", type=Path)
+    doctor = sub.add_parser("doctor")
+    doctor.add_argument("--json", action="store_true")
     return parser
 
 
@@ -768,6 +996,8 @@ def main(argv: list[str] | None = None) -> int:
             payload, code = command_host_init(context, args.name)
         elif args.command == "external-review":
             return command_external_review(context, args.repo, args.cycle, args.evidence)
+        elif args.command == "doctor":
+            payload, code = command_doctor(context)
         else:
             parser.error(f"unsupported command: {args.command}")
         emit(payload, getattr(args, "json", False))

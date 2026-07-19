@@ -146,3 +146,33 @@ class HarnessTests(unittest.TestCase):
         self.run_cli("apply", "--yes")
         self.assertEqual(ROOT / "bin/codex-harness", (self.home / ".local/bin/codex-harness").resolve())
         self.assertEqual(ROOT / "bin/codex-external-review", (self.home / ".local/bin/codex-external-review").resolve())
+
+    def test_doctor_passes_for_sources_and_applied_temp_home(self):
+        self.run_cli("apply", "--yes")
+        result = self.run_cli("doctor", "--json")
+        payload = json.loads(result.stdout)
+        self.assertEqual("healthy", payload["health"])
+        self.assertTrue(all(check["status"] == "pass" for check in payload["checks"]))
+
+    def test_doctor_detects_secret_in_managed_source_without_printing_value(self):
+        checkout = self.home / "secret-checkout"
+        subprocess.run(["cp", "-R", str(ROOT), str(checkout)], check=True)
+        bad = checkout / "sources/config/hosts/default.local.toml"
+        bad.write_text('api_token = "super-secret-value"\n')
+        result = subprocess.run(
+            [str(checkout / "bin/codex-harness"), "doctor", "--json"],
+            cwd=checkout,
+            env=self.env,
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(1, result.returncode)
+        self.assertIn("suspected secret", result.stdout)
+        self.assertNotIn("super-secret-value", result.stdout)
+
+    def test_operational_sources_have_no_sibling_harness_path(self):
+        self.run_cli("apply", "--yes")
+        result = self.run_cli("doctor", "--json")
+        payload = json.loads(result.stdout)
+        boundary = next(check for check in payload["checks"] if check["id"] == "self-contained")
+        self.assertEqual("pass", boundary["status"])
