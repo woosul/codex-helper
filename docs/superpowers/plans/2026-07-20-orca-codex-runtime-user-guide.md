@@ -27,7 +27,7 @@ tags:
 - Modify: `tests/test_sources.py`
 - Test: `tests/test_sources.py`
 
-- [ ] **Step 1: Add the failing contract test**
+- [x] **Step 1: Add the failing contract test**
 
 Add this method to `SourceContractTests` after `test_user_guide_covers_skill_lifecycle`:
 
@@ -54,7 +54,7 @@ Add this method to `SourceContractTests` after `test_user_guide_covers_skill_lif
             self.assertIn(field, guidance)
 ```
 
-- [ ] **Step 2: Run the focused test and verify it fails**
+- [x] **Step 2: Run the focused test and verify it fails**
 
 Run:
 
@@ -64,7 +64,7 @@ uv run python -m unittest tests.test_sources.SourceContractTests.test_user_guide
 
 Expected: `FAIL` because `docs/user-guide.md` has no frontmatter or Orca runtime section and `AGENTS.md` has no frontmatter rule.
 
-- [ ] **Step 3: Commit the failing contract**
+- [x] **Step 3: Commit the failing contract**
 
 ```bash
 git add tests/test_sources.py
@@ -78,7 +78,7 @@ git commit -m "test: require Orca runtime documentation"
 - Modify: `docs/user-guide.md`
 - Test: `tests/test_sources.py`
 
-- [ ] **Step 1: Add the project documentation rule**
+- [x] **Step 1: Add the project documentation rule**
 
 Add this section before `Harness Independence` in `AGENTS.md`:
 
@@ -90,7 +90,7 @@ Add this section before `Harness Independence` in `AGENTS.md`:
 - Do not rewrite generated artifacts or vendored upstream documents solely to add frontmatter.
 ```
 
-- [ ] **Step 2: Add frontmatter to the user guide**
+- [x] **Step 2: Add frontmatter to the user guide**
 
 Prepend:
 
@@ -107,7 +107,7 @@ tags:
 ---
 ```
 
-- [ ] **Step 3: Add the Orca runtime reference section**
+- [x] **Step 3: Add the Orca runtime reference section**
 
 Between `일상 운용` and `제공 워크플로`, add:
 
@@ -155,7 +155,7 @@ scanner 커스텀 에이전트를 하나 실행해서 README의 첫 제목만 �
 ```
 ````
 
-- [ ] **Step 4: Run the focused contract and verify it passes**
+- [x] **Step 4: Run the focused contract and verify it passes**
 
 Run:
 
@@ -165,7 +165,7 @@ uv run python -m unittest tests.test_sources.SourceContractTests.test_user_guide
 
 Expected: `OK`, 1 test passed.
 
-- [ ] **Step 5: Commit the implementation**
+- [x] **Step 5: Commit the implementation**
 
 ```bash
 git add AGENTS.md docs/user-guide.md
@@ -179,7 +179,7 @@ git commit -m "docs: explain Orca Codex runtime"
 - Verify: `docs/user-guide.md`
 - Verify: `tests/test_sources.py`
 
-- [ ] **Step 1: Verify Mermaid and frontmatter structure**
+- [x] **Step 1: Verify Mermaid and frontmatter structure**
 
 Run:
 
@@ -199,7 +199,7 @@ PY
 
 Expected: `frontmatter=ok mermaid=ok`.
 
-- [ ] **Step 2: Run the complete suite**
+- [x] **Step 2: Run the complete suite**
 
 Run:
 
@@ -209,7 +209,7 @@ Run:
 
 Expected: all tests pass, including the new documentation contract.
 
-- [ ] **Step 3: Check whitespace and scope**
+- [x] **Step 3: Check whitespace and scope**
 
 Run:
 
@@ -221,7 +221,7 @@ git diff --name-only master...HEAD
 
 Expected: no whitespace errors; only the plan, contract test, `AGENTS.md`, and `docs/user-guide.md` are implementation-branch changes. The user's `docs/user-report/UR001_kickoff.md` change remains only in the original checkout.
 
-- [ ] **Step 4: Record plan completion**
+- [x] **Step 4: Record plan completion**
 
 Mark every completed checkbox in this plan and commit it:
 
