@@ -14,11 +14,19 @@ class SourceContractTests(unittest.TestCase):
             "Simplicity First",
             "Surgical Changes",
             "Goal-Driven Execution",
+            "Trade-off Reporting",
             "Harness Independence",
         ):
             self.assertIn(heading, text)
         self.assertIn("fresh", text.lower())
+        self.assertIn("Exclude simple work results", text)
         self.assertNotRegex(text, re.compile(r"/[^\n]*/claude-harness-helper"))
+
+        manifest = tomllib.loads((ROOT / "manifest.toml").read_text())
+        global_agents = next(
+            asset for asset in manifest["assets"] if asset["id"] == "global-agents"
+        )
+        self.assertEqual("1.0.1", global_agents["version"])
 
     def test_manifest_and_toml_sources_parse(self):
         paths = [

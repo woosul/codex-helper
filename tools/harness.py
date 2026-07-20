@@ -1236,6 +1236,7 @@ def command_doctor(context: Context) -> tuple[dict[str, Any], int]:
         "Simplicity First",
         "Surgical Changes",
         "Goal-Driven Execution",
+        "Trade-off Reporting",
         "Harness Independence",
     )
     add("guidance", all(heading in guidance for heading in headings), "global guidance contract is present")

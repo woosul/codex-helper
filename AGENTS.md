@@ -26,6 +26,12 @@ These instructions are the personal default for Codex across repositories. More 
 - For bugs and behavior changes, establish a failing test or reproduction before the fix.
 - Do not claim completion without fresh test, build, or behavior evidence from the final state.
 
+## 5. Trade-off Reporting
+
+- End every decision recommendation and non-trivial work result with a clearly labeled `Trade-off:` statement, or `트레이드오프:` when responding in Korean.
+- State the concrete benefit together with the cost, constraint, risk, or forgone alternative that materially affects the decision.
+- Exclude simple work results, factual answers, acknowledgements, and status-only responses. Do not invent a trade-off when none materially exists.
+
 ## Codex Operating Rules
 
 - Use `AGENTS.md` for durable behavior, skills for reusable workflows, custom agents for bounded roles, and rules for command policy.
