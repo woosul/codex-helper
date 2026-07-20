@@ -294,6 +294,27 @@ class SourceContractTests(unittest.TestCase):
         ):
             self.assertIn(phrase, text)
 
+    def test_user_guide_covers_orca_codex_runtime(self):
+        guide = (ROOT / "docs/user-guide.md").read_text()
+        guidance = (ROOT / "AGENTS.md").read_text()
+
+        self.assertTrue(guide.startswith("---\n"))
+        for phrase in (
+            "Orca에서 Codex CLI 멀티에이전트 실행",
+            "```mermaid",
+            "codex-harness",
+            "상주 프로세스",
+            "runtime ID",
+            "복구 snapshot",
+            "root orchestrator",
+            "새 Codex 작업",
+        ):
+            self.assertIn(phrase, guide)
+
+        self.assertIn("YAML frontmatter", guidance)
+        for field in ("title", "description", "date", "tags"):
+            self.assertIn(field, guidance)
+
     def test_operator_docs_cover_two_level_skill_activation(self):
         readme = (ROOT / "README.md").read_text()
         guide = (ROOT / "docs/user-guide.md").read_text()
