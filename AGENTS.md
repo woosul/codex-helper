@@ -52,6 +52,12 @@ These instructions are the personal default for Codex across repositories. More 
 - Three cycles are the default; the root may shorten or extend them with evidence.
 - The coordinating root owns assigning every handoff label and tool ID: `role instance - task name`; repeatable-role numbers increase monotonically, are never recycled, and only same-thread follow-ups reuse them. Subagents echo their assigned label.
 
+## Documentation
+
+- New Markdown documents must start with YAML frontmatter containing `title`, `description`, `date`, and `tags`.
+- When directly updating a maintained Markdown document that lacks frontmatter, add it if doing so is within the requested scope.
+- Do not rewrite generated artifacts or vendored upstream documents solely to add frontmatter.
+
 ## Harness Independence
 
 - `codex-helper` is the sole source repository for the Codex harness.
