@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 .codex-loop/
 .coverage
+/.env-*
+!/.env-*.example
+# Legacy v0.3 local overlays stay ignored until each machine migrates them.
 sources/config/hosts/*.local.toml
-!sources/config/hosts/default.toml
-!sources/config/hosts/rock.toml

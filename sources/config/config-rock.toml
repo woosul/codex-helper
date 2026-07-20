@@ -1,3 +1,4 @@
+# Portable, non-secret Codex settings for the rock host.
 personality = "pragmatic"
 model = "gpt-5.6-sol"
 model_reasoning_effort = "high"

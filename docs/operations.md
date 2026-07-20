@@ -45,7 +45,7 @@ codex-harness skill reset parallel-review
 
 ## Feature-delivery operation
 
-When the managed `feature-delivery` skill is available and enabled, invoke `$feature-delivery` from a persistent parent/root task, then check health with `codex-harness skill status feature-delivery --json` and `codex-harness doctor --json`. The parent must remain active until every delegated role returns; do not start this workflow from an ephemeral task.
+The managed `feature-delivery` skill is explicit-only. Mentioning its name or changing its contract is not invocation. An active `$feature-delivery` invocation authorizes subagents without a separate delegation request, although root-inline execution remains valid. After the root delegates a bounded scope, the subagent performs it exclusively; the root does not duplicate that work and keeps the parent active for coordination and integration.
 
 If the skill is unavailable or machine-locally disabled, global guidance does not require the missing skill. The root can continue inline or use another chosen workflow without attempting to invoke it.
 
@@ -78,9 +78,9 @@ codex-harness restore SNAPSHOT_ID --yes
 codex-harness unlink --yes
 ```
 
-Restore may replace the exact targets listed by the receipt. Unlink removes only links that still point at recorded sources, removes only recorded config paths, preserves `config.toml` as a real file, and reports externally changed targets as conflicts.
+Restore may replace the exact targets listed by the receipt. Unlink removes only links that still point at recorded sources. When the live config link still matches the config source recorded in state, unlink materializes those canonical bytes as a `0600` real `config.toml`; a foreign file or link is preserved and reported as a conflict.
 
-## Host overlays
+## Host configs
 
 Pass the host before the subcommand:
 
@@ -89,7 +89,11 @@ codex-harness --host rock plan --json
 codex-harness --host rock apply --yes
 ```
 
-Tracked host files contain portable non-secret preferences. Ignored `NAME.local.toml` files are for machine-local, non-versioned preferences; credentials still belong in environment variables or Codex credential storage.
+The selected source is `sources/config/config-<host>.toml`; it is the canonical tracked machine config. Selection precedence is `--host` > `CODEX_HELPER_HOST` > normalized short hostname. Its live target is always `$HOME/.codex/config.toml`, independent of runtime `CODEX_HOME`.
+
+Create a new host source atomically from the safe baseline with `codex-harness host init NAME`, review it, and commit it before applying. Machine-specific paths and choices may remain in that host file. Move credentials to the ignored `.env-NAME`, commit a redacted `.env-NAME.example`, and use `bin/codex-mcp-env` for commands that need those values. `doctor` parses every `config-*.toml` and rejects literal bearer secrets without printing values.
+
+Every v0.4.1 host config must set `features.multi_agent = true`, `agents.max_threads = 4`, and `agents.max_depth = 1`.
 
 ## External review
 

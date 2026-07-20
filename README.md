@@ -1,6 +1,6 @@
 # codex-helper
 
-`codex-helper` is a self-contained, Git-versioned harness for portable Codex guidance, configuration overlays, agents, rules, skills, utilities, and health checks.
+`codex-helper` is a self-contained, Git-versioned harness for portable Codex guidance, host-selected configuration, agents, rules, skills, utilities, and health checks.
 
 ## Requirements
 
@@ -16,7 +16,7 @@ cd codex-helper
 ./install.sh --host rock
 ```
 
-Review the printed plan before answering `y`. The installer creates individual links and merges only manifest-owned configuration keys.
+Create the ignored host secret file from `.env-<host>.example` when that host config needs credentials. Review the printed plan before answering `y`. The installer creates individual links, including `~/.codex/config.toml` → the selected Git-tracked `sources/config/config-<host>.toml`. This global config target is independent of a runtime-specific `CODEX_HOME`.
 
 ## Commands
 
@@ -33,11 +33,11 @@ Review the printed plan before answering `y`. The installer creates individual l
 | `codex-harness skill reset NAME` | Remove the local override and return to the manifest default. |
 | `codex-harness version [ASSET]` | Show harness or asset version metadata. |
 | `codex-harness bootstrap` | Create only required parent directories. |
-| `codex-harness host init NAME` | Create a tracked, non-secret host overlay skeleton. |
+| `codex-harness host init NAME` | Atomically create `config-NAME.toml` from the safe default. |
 | `codex-harness snapshot --json` | Back up only declared targets, live config, and harness state. |
 | `codex-harness apply --yes` | Transactionally apply the reviewed plan. |
 | `codex-harness restore ID --yes` | Restore a snapshot receipt. |
-| `codex-harness unlink --yes` | Remove matching managed links and owned config keys. |
+| `codex-harness unlink --yes` | Remove matching links and materialize the recorded config as a `0600` file. |
 | `codex-harness doctor --json` | Validate sources, links, config ownership, secrets, and versions. |
 | `codex-external-review --repo PATH` | Run one bounded, ephemeral, read-only review cycle. |
 
@@ -45,13 +45,13 @@ Global options such as `--host rock` precede the command. Add `--json` where sup
 
 ## Ownership boundary
 
-This repository does not own Codex authentication, sessions, logs, caches, databases, plugins, marketplaces, projects, desktop/UI state, `rules/default.rules`, or undeclared skills. Those remain runtime- or user-owned and are preserved.
+This repository does not own Codex authentication, sessions, logs, caches, databases, plugin payloads, desktop/UI state, `rules/default.rules`, or undeclared skills. Host config files may track the corresponding Codex configuration choices, while secret values stay in ignored `.env-<host>` files.
 
 ## Feature delivery workflow
 
-Use `$feature-delivery` for a non-trivial feature, ambiguous multi-file change, or an explicitly requested multi-agent delivery. The default flow is planner/scanner → root plan gate → developer → reviewer/verifier → root integration, using Subagent-Driven execution. The root can use a task-scoped inline override, while trivial edits stay outside this workflow.
+`$feature-delivery` runs only when the user explicitly invokes it; merely mentioning or editing the skill is not an invocation. An active invocation authorizes planner/scanner/developer/reviewer/verifier subagents without another request. When the root delegates a bounded task, that subagent performs the scope and the root does not duplicate it.
 
-One developer writes in one checkout; multiple developers use separate worktrees. The developer profile defaults to `workspace-write`, but actual edits remain bounded by the parent, user, and system permission boundary. The root owns the portable `role instance - task name` activity label, such as `developer 1 - implement role badges`, and owns integration plus commits and pushes when user/system authorization permits. See the [user guide](docs/user-guide.md#기능-전달-워크플로) for operating details.
+A single or sequential developer may use the active checkout unless the root requests isolation. Before a second concurrent developer starts, the root verifies or creates a separate worktree so writable developers never share a checkout. The developer profile defaults to `workspace-write`, but actual edits remain bounded by the parent, user, and system permission boundary.
 
 ## Documentation
 

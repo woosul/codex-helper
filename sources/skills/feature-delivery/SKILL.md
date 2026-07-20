@@ -1,34 +1,53 @@
 ---
 name: feature-delivery
-description: Use for non-trivial feature implementation, ambiguous multi-file changes, or explicit multi-agent delivery. Skip typos, one-line changes, and other trivial edits.
+description: >-
+  Use only when the user explicitly invokes $feature-delivery or explicitly
+  asks to use the feature-delivery workflow. Never auto-trigger from task size,
+  ambiguity, file count, or implementation complexity.
 ---
 
 # Feature Delivery
 
+## Activation Gate
+
+Start this workflow only from the coordinating root task and only when the user explicitly requests it. Mentioning feature delivery as a topic or editing this skill is not an invocation. When dispatched as a role within an active feature-delivery workflow, execute the bounded assignment directly; do not re-enter this workflow.
+
 ## Execution Strategy
 
-Start this workflow only from the coordinating root task. When dispatched as a role within an active feature-delivery workflow, do not re-enter this workflow; execute the bounded assignment directly.
+Use **Root-Inline by default**. The root agent plans, implements, reviews, and verifies the work directly.
 
-Use **Subagent-Driven by default** when the task does not select an execution strategy. The root agent may provide an explicit **inline workflow override** to execute directly, to **add, remove, reorder, or skip** roles or stages, or to change the correction-loop count. This is a default playbook, not an immutable state machine. System and user permission boundaries still apply.
+Invoking `$feature-delivery` authorizes the root to spawn subagents as needed and does not require a separate subagent request. This is permission, not a requirement; the root may still keep the workflow inline.
 
-## Default Playbook
+If the root spawns a subagent, the delegated scope transfers to that subagent. Once the root delegates a bounded task, that subagent owns and performs it; the root must not duplicate the delegated work while it is active. The root may continue coordination, integration, or clearly non-overlapping work.
 
-1. Restate the objective, constraints, non-goals, acceptance criteria, and unresolved questions.
-2. Run `planner` and, when repository discovery helps, `scanner` as bounded read-only work in parallel.
-3. Apply a **root plan gate**: reconcile their evidence, resolve or return material ambiguity, and approve the assignment before any implementation begins.
-4. Assign one `developer` an active checkout, explicit owned and excluded scope, and required tests. A developer works test-first and reports fresh evidence.
-5. Before spawning multiple developers, create **a separate worktree per developer**. Developers may not share a writable checkout; their scopes must not overlap.
-6. Run `reviewer` and `verifier` in parallel after implementation, then wait for both. The root validates each finding before correction.
-7. Return validated findings to the developer as a narrower assignment, then rerun the `reviewer` and `verifier` checks through the **three-cycle default**. Direct root correction is available only through an explicit inline override. The root may shorten or extend the loop when the evidence supports it.
-8. Perform final root verification and inspect the final diff.
+The root may **add, remove, reorder, or skip** roles or stages and may change the correction-loop count. System and user permission boundaries still apply.
+
+## Default Root-Inline Playbook
+
+1. Restate the objective, constraints, acceptance criteria, and unresolved questions.
+2. Inspect the repository directly and apply a **root plan gate** before editing.
+3. Implement the smallest valid change in the active checkout.
+4. Run focused tests, then fresh final verification.
+5. Review the final diff and report remaining uncertainty.
+
+## Authorized Subagent-Driven Variant
+
+Use this variant after an explicit `$feature-delivery` invocation when the root chooses delegation, or after a separate explicit request for subagents.
+
+1. Run `planner` and, when repository discovery helps, `scanner` as bounded read-only assignments.
+2. Apply the root plan gate and assign one `developer` an explicit scope and required tests.
+3. Do not require a separate worktree for a single developer or sequential developer assignments unless the root explicitly requests one. Before starting a second concurrent developer, verify that it has a separate worktree; create one before work begins if it does not. Concurrent developers must not share a writable checkout.
+4. Run `reviewer` and `verifier` after implementation.
+5. Return validated findings to the developer as a narrower assignment. The **three-cycle default** may be shortened or extended by the root with evidence.
+6. Perform final root verification and integration.
 
 ## Handoff Contract
 
-Every assignment supplies: the objective, acceptance criteria, owned paths, excluded paths, relevant constraints, the expected tests or checks, and the required response format. Each response summarizes changed paths or inspected evidence, commands run with outcomes, findings, unresolved ambiguity, and any scope concern. The root rechecks evidence before relying on it.
+For every explicit assignment, supply the objective, acceptance criteria, owned and excluded paths, constraints, expected checks, and response format. Treat the assignment as exclusive while active: the subagent performs the delegated work and the root does not implement the same scope. The root rechecks returned evidence before integration.
 
 ## Visibility Contract
 
-The coordinating root assigns a label and tool task ID in every handoff. Labels use `role instance - task name`, with a meaningful verb-object task name rather than redundant internal wording such as `role badge spec`. Keep the same label on dispatch, progress, and completion.
+The coordinating root assigns a label and tool task ID to every explicit handoff:
 
 - `planner - plan feature delivery`
 - `developer 1 - implement role badges`
@@ -36,13 +55,12 @@ The coordinating root assigns a label and tool task ID in every handoff. Labels 
 - `reviewer 2 - review role quality`
 - `verifier 1 - verify acceptance criteria`
 
-Repeatable-role numbers increase monotonically for each distinct spawned thread during the workflow and are never recycled, including serial replacements and new correction-cycle threads. Only a follow-up to the same agent thread reuses its number. Tool task IDs mirror the label with underscores, for example `reviewer_2__review_role_quality`. Subagents echo the assigned label and never allocate numbers. Labels are the portable fallback when client UI or nickname display differs.
+Repeatable-role numbers increase monotonically and are never recycled. Only a follow-up to the same agent thread reuses its number. Tool task IDs mirror the label, for example `reviewer_2__review_role_quality`. Subagents echo the assigned label and never allocate numbers.
 
 ## Boundaries
 
-- Return material ambiguity to the root for resolution; do not guess or expand scope.
-- Subagents do not commit, push, self-approve, or expand the assigned scope.
-- A shared-write conflict falls back to one developer.
-- An inline override cannot transfer root-owned commits, pushes, or final integration, and cannot allow multiple developers in one checkout.
-- The delegating parent/root task remains persistent until every spawned subagent has returned; use a persistent app task or interactive CLI.
+- Return material ambiguity to the root; do not expand scope.
+- Subagents do not commit, push, self-approve, or broaden their assignment.
+- The root must not duplicate the delegated work; it resumes that scope only after completion, interruption, or a reported blocker.
+- The delegating parent/root task remains persistent until every spawned subagent has returned.
 - The root agent owns commits, pushes, and final integration.

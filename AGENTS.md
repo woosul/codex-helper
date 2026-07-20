@@ -29,21 +29,22 @@ These instructions are the personal default for Codex across repositories. More 
 ## Codex Operating Rules
 
 - Use `AGENTS.md` for durable behavior, skills for reusable workflows, custom agents for bounded roles, and rules for command policy.
-- Parallelize independent read-heavy work; coordinate writes through the root agent or isolated worktrees.
+- The root handles tasks directly by default. Use subagents only when the user explicitly requests subagents, delegation, multi-agent execution, or parallel agent work, or explicitly invokes `$feature-delivery`.
 - Preserve user changes and external tool-managed state unless the user explicitly places them in scope.
 
 ## Feature Delivery
 
-- When `$feature-delivery` is available and enabled, use it for non-trivial feature implementation, ambiguous multi-file changes, or explicit multi-agent delivery.
+- Only invoke `$feature-delivery` when the user explicitly requests it. Do not infer activation from task size, ambiguity, file count, or implementation complexity.
+- Merely mentioning the skill, quoting its name, or editing its contract is not an invocation.
 - If `$feature-delivery` is unavailable or disabled, the coordinating root may execute or reconfigure the workflow inline or use another chosen workflow; it must not attempt to invoke the missing skill.
 - The remaining rules in this section apply only while a feature-delivery workflow is active.
 - Start it only from the coordinating root task. As a delegated role in an active feature-delivery workflow, execute the bounded assignment directly; do not re-enter the workflow.
-- It is Subagent-Driven by default; a root task-scoped inline override can change execution mode, roles, stage order, or loop count.
+- It is Root-Inline by default, but an active explicit invocation authorizes subagents without a separate request.
+- Once the root delegates a bounded task, the subagent owns and performs that scope. The root must not duplicate the delegated work and may continue only coordination, integration, or clearly non-overlapping work.
 - The root validates the plan and retains user communication, commits, pushes, and final integration.
-- One developer uses the active checkout; multiple developers require separate worktrees and non-overlapping scope.
+- Do not require a separate worktree for one developer or sequential developer assignments unless the root explicitly asks for one. Before starting a second concurrent developer, verify isolation and create one before dispatch if needed; concurrent developers must not share a writable checkout.
 - Three cycles are the default; the root may shorten or extend them with evidence.
 - The coordinating root owns assigning every handoff label and tool ID: `role instance - task name`; repeatable-role numbers increase monotonically, are never recycled, and only same-thread follow-ups reuse them. Subagents echo their assigned label.
-- Skip this workflow for trivial edits.
 
 ## Harness Independence
 

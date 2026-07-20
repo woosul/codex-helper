@@ -23,9 +23,9 @@ class SourceContractTests(unittest.TestCase):
     def test_manifest_and_toml_sources_parse(self):
         paths = [
             ROOT / "manifest.toml",
-            ROOT / "sources/config/base.toml",
-            ROOT / "sources/config/hosts/default.toml",
-            ROOT / "sources/config/hosts/rock.toml",
+            ROOT / "sources/config/config-default.toml",
+            ROOT / "sources/config/config-gems.toml",
+            ROOT / "sources/config/config-rock.toml",
             ROOT / "sources/agents/scanner.toml",
             ROOT / "sources/agents/planner.toml",
             ROOT / "sources/agents/developer.toml",
@@ -38,9 +38,24 @@ class SourceContractTests(unittest.TestCase):
             with self.subTest(path=path):
                 tomllib.loads(path.read_text())
 
-    def test_base_config_uses_supported_feature_keys(self):
-        data = tomllib.loads((ROOT / "sources/config/base.toml").read_text())
-        self.assertNotIn("rmcp_client", data.get("features", {}))
+    def test_host_configs_keep_required_multi_agent_settings(self):
+        for path in (ROOT / "sources/config").glob("config-*.toml"):
+            data = tomllib.loads(path.read_text())
+            self.assertTrue(data["features"]["multi_agent"])
+            self.assertEqual(4, data["agents"]["max_threads"])
+            self.assertEqual(1, data["agents"]["max_depth"])
+
+    def test_gems_context_window_and_compaction_threshold(self):
+        data = tomllib.loads((ROOT / "sources/config/config-gems.toml").read_text())
+        manifest = tomllib.loads((ROOT / "manifest.toml").read_text())
+        self.assertEqual(1_000_000, data["model_context_window"])
+        self.assertEqual(850_000, data["model_auto_compact_token_limit"])
+        self.assertEqual(
+            data["model_context_window"] * 85 // 100,
+            data["model_auto_compact_token_limit"],
+        )
+        self.assertEqual("total", data["model_auto_compact_token_limit_scope"])
+        self.assertEqual("1.2.0", manifest["config"]["asset_version"])
 
     def test_agents_have_declared_role_permissions(self):
         expected_modes = {
@@ -107,15 +122,21 @@ class SourceContractTests(unittest.TestCase):
 
     def test_manifest_defines_skill_activation_contract(self):
         data = tomllib.loads((ROOT / "manifest.toml").read_text())
-        self.assertEqual("0.3.0", data["harness_version"])
+        self.assertEqual(2, data["schema_version"])
+        self.assertEqual("0.4.1", data["harness_version"])
+        self.assertEqual("$HOME/.codex", data["paths"]["config_home"])
+        self.assertEqual("$HOME/.codex/config.toml", data["config"]["target"])
         self.assertIn("preferences", data["config"])
+        self.assertEqual("sources/config/config-{host}.toml", data["config"]["source_pattern"])
+        self.assertEqual("sources/config/config-default.toml", data["config"]["default_source"])
+        self.assertEqual("global-config", data["config"]["asset_id"])
         for asset in data["assets"]:
             if asset["category"] == "skills":
                 self.assertIsInstance(asset.get("enabled", True), bool)
 
     def test_feature_delivery_manifest_contract(self):
         data = tomllib.loads((ROOT / "manifest.toml").read_text())
-        self.assertEqual("0.3.0", data["harness_version"])
+        self.assertEqual("0.4.1", data["harness_version"])
         assets = {asset["id"]: asset for asset in data["assets"]}
 
         for asset_id, source, target in (
@@ -139,6 +160,7 @@ class SourceContractTests(unittest.TestCase):
         self.assertEqual("skills", skill["category"])
         self.assertEqual("sources/skills/feature-delivery", skill["source"])
         self.assertEqual("$HOME/.agents/skills/feature-delivery", skill["target"])
+        self.assertEqual("1.2.0", skill["version"])
         self.assertTrue(skill["enabled"])
 
     def test_feature_delivery_skill_contract(self):
@@ -146,15 +168,23 @@ class SourceContractTests(unittest.TestCase):
         text = skill.read_text()
         for phrase in (
             "name: feature-delivery",
+            "only when the user explicitly invokes",
+            "$feature-delivery",
             "planner",
             "scanner",
             "developer",
             "reviewer",
             "verifier",
             "root plan gate",
-            "Subagent-Driven by default",
-            "inline workflow override",
-            "separate worktree per developer",
+            "Root-Inline by default",
+            "Invoking `$feature-delivery` authorizes the root to spawn subagents",
+            "does not require a separate subagent request",
+            "Once the root delegates a bounded task, that subagent owns and performs it",
+            "must not duplicate the delegated work",
+            "Do not require a separate worktree for a single developer",
+            "Before starting a second concurrent developer",
+            "verify that it has a separate worktree",
+            "create one before work begins",
             "three-cycle default",
             "add, remove, reorder, or skip",
             "The root agent owns commits, pushes, and final integration",
@@ -175,17 +205,28 @@ class SourceContractTests(unittest.TestCase):
             "Subagents echo the assigned label and never allocate numbers",
         ):
             self.assertIn(phrase, text)
+        self.assertNotIn("Subagent-Driven by default", text)
 
         metadata = (ROOT / "sources/skills/feature-delivery/agents/openai.yaml").read_text()
         self.assertIn("Feature Delivery", metadata)
+        self.assertIn("allow_implicit_invocation: false", metadata)
 
         guidance = (ROOT / "AGENTS.md").read_text()
         self.assertIn("$feature-delivery", guidance)
-        self.assertIn("When `$feature-delivery` is available and enabled", guidance)
+        self.assertIn("Only invoke `$feature-delivery` when the user explicitly requests it", guidance)
+        self.assertIn("Do not infer activation from task size", guidance)
+        self.assertIn("The root handles tasks directly by default", guidance)
+        self.assertIn("or explicitly invokes `$feature-delivery`", guidance)
+        self.assertIn("Merely mentioning the skill", guidance)
+        self.assertIn("authorizes subagents without a separate request", guidance)
+        self.assertIn("the subagent owns and performs that scope", guidance)
+        self.assertIn("must not duplicate the delegated work", guidance)
+        self.assertIn("Do not require a separate worktree for one developer", guidance)
+        self.assertIn("Before starting a second concurrent developer", guidance)
+        self.assertIn("create one before dispatch", guidance)
         self.assertIn("If `$feature-delivery` is unavailable or disabled", guidance)
         self.assertIn("execute or reconfigure the workflow inline", guidance)
         self.assertIn("must not attempt to invoke the missing skill", guidance)
-        self.assertIn("non-trivial feature", guidance)
         self.assertIn("delegated role", guidance)
         self.assertIn("do not re-enter", guidance)
         self.assertIn("coordinating root", guidance)
@@ -270,9 +311,16 @@ class SourceContractTests(unittest.TestCase):
         for phrase in (
             "planner",
             "developer",
-            "기본 Subagent-Driven",
-            "인라인 override",
-            "별도 worktree",
+            "명시적으로 요청할 때만",
+            "기본 Root-Inline",
+            "`$feature-delivery` 명시 호출은 서브에이전트 사용을 허가",
+            "별도 서브에이전트 요청은 필요하지 않다",
+            "해당 범위는 서브에이전트가 수행",
+            "같은 작업을 중복 수행하지 않는다",
+            "단일 developer에게 별도 worktree를 강제하지 않는다",
+            "두 번째 동시 developer",
+            "worktree 존재를 확인",
+            "없으면 생성한 뒤",
             "기본 세 번",
             "workspace-write",
             "사용자/시스템 권한 경계",
@@ -287,6 +335,13 @@ class SourceContractTests(unittest.TestCase):
             "인라인 또는 루트가 선택한 다른 워크플로",
         ):
             self.assertIn(phrase, guide)
+        self.assertNotIn("기본 Subagent-Driven", guide)
+
+        rollout = (ROOT / "docs/cross-machine-bootstrap.md").read_text()
+        self.assertIn("feature-delivery 1.2.0", rollout)
+        self.assertIn("second concurrent developer", rollout)
+        self.assertIn("git pull --ff-only", rollout)
+        self.assertIn("codex-harness apply --yes", rollout)
 
         operations = documents["docs/operations.md"]
         for phrase in (

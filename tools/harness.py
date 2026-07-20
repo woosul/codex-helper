@@ -51,11 +51,14 @@ class Context:
     harness_version: str
     minimum_codex_version: str
     codex_home: Path
+    config_home: Path
     user_skills: Path
     user_bin: Path
-    config_base: Path
-    host_overlay: Path
-    local_overlay: Path | None
+    config_source: Path
+    config_default_source: Path
+    config_host: str
+    host_source: str
+    host_fallback: bool
     state_path: Path
     preferences_path: Path
     backups_dir: Path
@@ -123,17 +126,40 @@ def sha256(path: Path) -> str:
 
 def select_host(
     root: Path,
-    host_dir: Path,
+    source_pattern: str,
+    default_source: str,
     explicit: str | None,
     env: Mapping[str, str],
-) -> tuple[Path, Path | None]:
-    del root
-    name = explicit or env.get("CODEX_HELPER_HOST") or os.uname().nodename.split(".")[0].lower()
-    tracked = host_dir / f"{name}.toml"
-    if not tracked.exists():
-        tracked = host_dir / "default.toml"
-    local = host_dir / f"{name}.local.toml"
-    return tracked, local if local.exists() else None
+) -> tuple[Path, str, str, bool]:
+    default_path = (root / default_source).resolve()
+    if not is_within(default_path, root) or not default_path.is_file():
+        raise ValueError("invalid default config source")
+    configured = env.get("CODEX_HELPER_HOST")
+    if explicit is not None:
+        raw_name, origin, required = explicit, "explicit", True
+    elif configured:
+        raw_name, origin, required = configured, "environment", True
+    else:
+        raw_name, origin, required = os.uname().nodename, "hostname", False
+
+    name = raw_name.split(".", 1)[0].lower()
+    if not re.fullmatch(r"[a-z0-9][a-z0-9_-]*", name):
+        if required:
+            raise ValueError("host name must match [a-z0-9][a-z0-9_-]*")
+        name = "default"
+        selected = default_path
+        fallback = True
+    else:
+        selected = (root / source_pattern.format(host=name)).resolve()
+        fallback = not selected.is_file()
+        if fallback:
+            if required:
+                raise ValueError(f"unknown host: {name}")
+            selected = default_path
+            name = "default"
+    if not is_within(selected, root) or not selected.is_file():
+        raise ValueError(f"invalid config source for host: {name}")
+    return selected, name, origin, fallback
 
 
 def load_context(
@@ -143,13 +169,14 @@ def load_context(
     env: Mapping[str, str],
 ) -> Context:
     data = tomllib.loads(manifest_path.read_text())
-    if data.get("schema_version") != 1:
+    if data.get("schema_version") != 2:
         raise ValueError("unsupported manifest schema_version")
     paths = data["paths"]
     codex_home = Path(expand_value(paths["codex_home"], env)).expanduser()
+    config_home = Path(expand_value(paths["config_home"], env)).expanduser()
     user_skills = Path(expand_value(paths["user_skills"], env)).expanduser()
     user_bin = Path(expand_value(paths["user_bin"], env)).expanduser()
-    approved = (codex_home, user_skills, user_bin)
+    approved = (codex_home, config_home, user_skills, user_bin)
     assets: list[Asset] = []
     ids: set[str] = set()
     targets: set[Path] = set()
@@ -186,8 +213,35 @@ def load_context(
             )
         )
     config = data["config"]
-    host_dir = (root / config["host_dir"]).resolve()
-    tracked, local = select_host(root, host_dir, host, env)
+    selected_config, config_host, host_source, host_fallback = select_host(
+        root,
+        config["source_pattern"],
+        config["default_source"],
+        host,
+        env,
+    )
+    config_target = Path(expand_value(config["target"], env)).expanduser()
+    if not is_lexically_within(config_target, config_home):
+        raise ValueError(f"target outside approved roots: {config_target}")
+    config_id = config["asset_id"]
+    if config_id in ids or config_target in targets:
+        raise ValueError("duplicate asset id or target")
+    assets.append(
+        Asset(
+            id=config_id,
+            kind="symlink",
+            category="config",
+            source=selected_config,
+            target=config_target,
+            scope="global",
+            version=config["asset_version"],
+            upstream=None,
+            license=None,
+            last_reviewed=None,
+            requires=(),
+            enabled=True,
+        )
+    )
     state_path = Path(expand_value(config["state"], env)).expanduser()
     preferences_path = Path(expand_value(config["preferences"], env)).expanduser()
     backups_dir = Path(expand_value(config["backups"], env)).expanduser()
@@ -196,19 +250,22 @@ def load_context(
         ("preferences", preferences_path),
         ("backups", backups_dir),
     ):
-        if not is_lexically_within(path, codex_home):
-            raise ValueError(f"{name} path outside Codex home: {path}")
+        if not is_lexically_within(path, config_home):
+            raise ValueError(f"{name} path outside global config home: {path}")
     return Context(
         root=root.resolve(),
         manifest_path=manifest_path.resolve(),
         harness_version=data["harness_version"],
         minimum_codex_version=data["minimum_codex_version"],
         codex_home=codex_home,
+        config_home=config_home,
         user_skills=user_skills,
         user_bin=user_bin,
-        config_base=(root / config["base"]).resolve(),
-        host_overlay=tracked,
-        local_overlay=local,
+        config_source=selected_config,
+        config_default_source=(root / config["default_source"]).resolve(),
+        config_host=config_host,
+        host_source=host_source,
+        host_fallback=host_fallback,
         state_path=state_path,
         preferences_path=preferences_path,
         backups_dir=backups_dir,
@@ -327,32 +384,15 @@ def resolve_skill(context: Context, name: str) -> Asset:
     return matches[0]
 
 
-def combined_overlay(context: Context) -> str:
-    documents = [context.config_base.read_text(), context.host_overlay.read_text()]
-    if context.local_overlay:
-        documents.append(context.local_overlay.read_text())
-    result = ""
-    for document in documents:
-        result = merge_config(result, document, previous_paths=()).text
-    return result
+def config_asset(context: Context) -> Asset:
+    return next(asset for asset in context.assets if asset.category == "config")
 
 
-def _toml_semantically_equal(left: str, right: str) -> bool:
-    return tomllib.loads(left or "") == tomllib.loads(right or "")
-
-
-def preview_config(context: Context) -> dict[str, Any]:
-    live_path = context.codex_home / "config.toml"
-    live_text = live_path.read_text() if live_path.exists() else ""
-    state = read_state(context.state_path) if context.state_path.exists() else {"managed_paths": []}
-    previous = tuple(tuple(path) for path in state.get("managed_paths", []))
-    result = merge_config(live_text, combined_overlay(context), previous)
-    changes = not _toml_semantically_equal(result.text, live_text)
+def host_record(context: Context) -> dict[str, Any]:
     return {
-        "target": str(live_path),
-        "status": "drifted" if changes else "current",
-        "managed_paths": [list(path) for path in result.managed_paths],
-        "changes": changes,
+        "name": context.config_host,
+        "selection": context.host_source,
+        "fallback": context.host_fallback,
     }
 
 
@@ -389,18 +429,23 @@ def command_plan(context: Context) -> tuple[dict[str, Any], int]:
     statuses = tuple(
         inspect_asset(asset, effective_enabled(asset, preferences)) for asset in context.assets
     )
-    config = preview_config(context)
     changes = [status.id for status in statuses if status.status not in {"current", "disabled"}]
-    if config["changes"]:
-        changes.append("config")
+    selected_config = config_asset(context)
+    config_status = inspect_asset(selected_config)
     return {
         "harness_version": context.harness_version,
-        "host_overlay": str(context.host_overlay),
+        "host": host_record(context),
+        "host_overlay": str(context.config_source),
         "assets": [
             asset_record(asset, status, preferences)
             for asset, status in zip(context.assets, statuses)
         ],
-        "config": config,
+        "config": {
+            "source": str(selected_config.source),
+            "target": str(selected_config.target),
+            "status": config_status.status,
+            "changes": config_status.status != "current",
+        },
         "changes": changes,
     }, EXIT_OK
 
@@ -414,7 +459,8 @@ def command_inventory(context: Context) -> tuple[dict[str, Any], int]:
     preferences = read_skill_preferences(context)
     return {
         "harness_version": context.harness_version,
-        "host_overlay": str(context.host_overlay),
+        "host": host_record(context),
+        "host_overlay": str(context.config_source),
         "assets": [
             asset_record(
                 asset,
@@ -490,24 +536,75 @@ def backup_target(target: Path, snapshot_dir: Path) -> dict[str, Any]:
     return entry
 
 
+def _target_is_approved(context: Context, target: Path) -> bool:
+    if not target.is_absolute():
+        return False
+    resolved_original_parent = target.parent.resolve(strict=False)
+    absolute_target = Path(os.path.abspath(target))
+    for root in (
+        context.codex_home,
+        context.config_home,
+        context.user_skills,
+        context.user_bin,
+    ):
+        absolute_root = Path(os.path.abspath(root))
+        if absolute_target == absolute_root:
+            continue
+        if not is_lexically_within(absolute_target, absolute_root):
+            continue
+        if is_within(resolved_original_parent, absolute_root.resolve(strict=False)):
+            return True
+    return False
+
+
+def validate_recorded_targets(context: Context, state: Mapping[str, Any]) -> None:
+    records = state.get("assets", {})
+    if not isinstance(records, Mapping):
+        raise ValueError("state assets must be an object")
+    for asset_id, record in records.items():
+        if not isinstance(record, Mapping) or not isinstance(record.get("target"), str):
+            raise ValueError(f"invalid recorded target for asset: {asset_id}")
+        if not _target_is_approved(context, Path(record["target"])):
+            raise ValueError(f"recorded target outside approved roots: {asset_id}")
+
+
+def validate_receipt_targets(context: Context, receipt: Mapping[str, Any]) -> None:
+    entries = receipt.get("entries", [])
+    if not isinstance(entries, list):
+        raise ValueError("snapshot entries must be a list")
+    for entry in entries:
+        if not isinstance(entry, Mapping) or not isinstance(entry.get("target"), str):
+            raise ValueError("invalid snapshot target")
+        if not _target_is_approved(context, Path(entry["target"])):
+            raise ValueError("snapshot target outside approved roots")
+
+
 def _recorded_assets(context: Context, state: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
-    records = {key: dict(value) for key, value in state.get("assets", {}).items()}
+    validate_recorded_targets(context, state)
+    state_records = state.get("assets", {})
+    records: dict[str, dict[str, Any]] = {}
     for asset in context.assets:
+        previous = state_records.get(asset.id, {})
+        recorded_source = previous.get("source") if isinstance(previous, Mapping) else None
         records[asset.id] = {
-            "source": str(asset.source),
+            "source": recorded_source if isinstance(recorded_source, str) else str(asset.source),
             "target": str(asset.target),
             "kind": asset.kind,
             "category": asset.category,
             "version": asset.version,
         }
+    current_ids = {asset.id for asset in context.assets}
+    records.update(
+        (key, dict(value))
+        for key, value in state_records.items()
+        if key not in current_ids
+    )
     return records
 
 
 def _snapshot_targets(context: Context, state: Mapping[str, Any]) -> list[Path]:
     targets = [Path(record["target"]) for record in _recorded_assets(context, state).values()]
-    targets.extend(
-        (context.codex_home / "config.toml", context.state_path, context.preferences_path)
-    )
+    targets.extend((context.state_path, context.preferences_path))
     ordered: list[Path] = []
     seen: set[Path] = set()
     for target in targets:
@@ -518,6 +615,7 @@ def _snapshot_targets(context: Context, state: Mapping[str, Any]) -> list[Path]:
 
 
 def create_snapshot(context: Context, state: Mapping[str, Any]) -> dict[str, Any]:
+    validate_recorded_targets(context, state)
     snapshot_id = new_snapshot_id()
     snapshot_dir = context.backups_dir / snapshot_id
     counter = 1
@@ -539,7 +637,7 @@ def create_snapshot(context: Context, state: Mapping[str, Any]) -> dict[str, Any
         "snapshot_id": snapshot_id,
         "harness_version": context.harness_version,
         "git_revision": revision,
-        "host_overlay": str(context.host_overlay),
+        "host_overlay": str(context.config_source),
         "entries": [backup_target(target, snapshot_dir) for target in _snapshot_targets(context, state)],
     }
     atomic_write(
@@ -557,6 +655,7 @@ def _remove_existing(path: Path) -> None:
 
 
 def restore_receipt(context: Context, receipt: Mapping[str, Any]) -> None:
+    validate_receipt_targets(context, receipt)
     snapshot_dir = context.backups_dir / str(receipt["snapshot_id"])
     for entry in reversed(receipt["entries"]):
         target = Path(entry["target"])
@@ -584,29 +683,13 @@ def atomic_symlink(source: Path, target: Path) -> None:
     os.replace(temporary, target)
 
 
-def apply_config(
-    context: Context,
-    previous_state: Mapping[str, Any],
-) -> tuple[str, tuple[tuple[str, ...], ...]]:
-    live_path = context.codex_home / "config.toml"
-    live_text = live_path.read_text() if live_path.exists() else ""
-    previous = tuple(tuple(path) for path in previous_state.get("managed_paths", []))
-    result = merge_config(live_text, combined_overlay(context), previous)
-    output = live_text if _toml_semantically_equal(result.text, live_text) else result.text
-    if output != live_text or not live_path.exists():
-        atomic_write(live_path, output.encode(), mode=0o600)
-    return output, result.managed_paths
-
-
-def build_state(
-    context: Context,
-    managed_paths: tuple[tuple[str, ...], ...],
-) -> dict[str, Any]:
+def build_state(context: Context) -> dict[str, Any]:
     return {
         "schema_version": 1,
         "harness_version": context.harness_version,
-        "host_overlay": str(context.host_overlay),
-        "managed_paths": [list(path) for path in managed_paths],
+        "host_overlay": str(context.config_source),
+        "host": host_record(context),
+        "managed_paths": [],
         "assets": {
             asset.id: {
                 "source": str(asset.source),
@@ -655,6 +738,7 @@ def command_restore(
 
 def command_apply(context: Context, yes: bool) -> tuple[dict[str, Any], int]:
     previous_state = read_state(context.state_path)
+    validate_recorded_targets(context, previous_state)
     preferences = read_skill_preferences(context)
     current_ids = {asset.id for asset in context.assets}
     stale = {
@@ -676,14 +760,23 @@ def command_apply(context: Context, yes: bool) -> tuple[dict[str, Any], int]:
         inspect_asset(asset, effective_enabled(asset, preferences)) for asset in context.assets
     ]
     conflicts.extend(status.id for status in statuses if status.status == "conflict")
+    config_rewire_requires_review = [
+        status.id
+        for asset, status in zip(context.assets, statuses)
+        if asset.category == "config"
+        and status.status in {"drifted", "broken", "conflict"}
+    ]
     protected_conflicts = [
         status.id
         for asset, status in zip(context.assets, statuses)
         if status.status == "conflict" and not effective_enabled(asset, preferences)
     ]
     plan, _ = command_plan(context)
-    if protected_conflicts or (conflicts and not yes):
-        return {**plan, "conflicts": conflicts}, EXIT_CONFLICT
+    if protected_conflicts or ((conflicts or config_rewire_requires_review) and not yes):
+        return {
+            **plan,
+            "conflicts": list(dict.fromkeys(conflicts + config_rewire_requires_review)),
+        }, EXIT_CONFLICT
     if not plan["changes"] and not removable_stale:
         return {**plan, "snapshot_id": None, "applied": False}, EXIT_OK
     receipt = create_snapshot(context, previous_state)
@@ -712,9 +805,7 @@ def command_apply(context: Context, yes: bool) -> tuple[dict[str, Any], int]:
                 _remove_existing(asset.target)
             atomic_symlink(asset.source, asset.target)
             mutated()
-        _, managed_paths = apply_config(context, previous_state)
-        mutated()
-        state = build_state(context, managed_paths)
+        state = build_state(context)
         atomic_write(
             context.state_path,
             (json.dumps(state, indent=2, sort_keys=True) + "\n").encode(),
@@ -740,7 +831,11 @@ def command_unlink(context: Context, yes: bool) -> tuple[dict[str, Any], int]:
     state = read_state(context.state_path)
     receipt = create_snapshot(context, state)
     conflicts: list[str] = []
-    for key, record in _recorded_assets(context, state).items():
+    selected_config = config_asset(context)
+    records = _recorded_assets(context, state)
+    for key, record in records.items():
+        if key == selected_config.id:
+            continue
         target, source = Path(record["target"]), Path(record["source"])
         if not target.exists() and not target.is_symlink():
             continue
@@ -748,13 +843,32 @@ def command_unlink(context: Context, yes: bool) -> tuple[dict[str, Any], int]:
             target.unlink()
         else:
             conflicts.append(key)
-    live_path = context.codex_home / "config.toml"
-    if live_path.exists():
+    live_path = selected_config.target
+    recorded_config = state.get("assets", {}).get(selected_config.id)
+    if recorded_config:
+        recorded_source = Path(recorded_config["source"])
+        if not live_path.exists() and not live_path.is_symlink():
+            pass
+        elif _link_matches(live_path, recorded_source) and recorded_source.is_file():
+            atomic_write(live_path, recorded_source.read_bytes(), mode=0o600)
+        elif (
+            live_path.is_file()
+            and not live_path.is_symlink()
+            and recorded_source.is_file()
+            and live_path.read_bytes() == recorded_source.read_bytes()
+        ):
+            pass
+        else:
+            conflicts.append(selected_config.id)
+    elif live_path.is_symlink():
+        conflicts.append(selected_config.id)
+    elif live_path.exists():
+        # Backward compatibility for state written by the merge-based harness.
         live = live_path.read_text()
         previous = tuple(tuple(path) for path in state.get("managed_paths", []))
         cleaned = merge_config(live, "", previous).text
         atomic_write(live_path, cleaned.encode(), mode=0o600)
-    if context.state_path.exists() or context.state_path.is_symlink():
+    if not conflicts and (context.state_path.exists() or context.state_path.is_symlink()):
         context.state_path.unlink()
     return {
         "snapshot_id": receipt["snapshot_id"],
@@ -766,6 +880,7 @@ def command_unlink(context: Context, yes: bool) -> tuple[dict[str, Any], int]:
 def command_bootstrap(context: Context) -> tuple[dict[str, Any], int]:
     directories = (
         context.codex_home,
+        context.config_home,
         context.user_skills,
         context.user_bin,
         context.codex_home / "agents",
@@ -782,14 +897,10 @@ def command_bootstrap(context: Context) -> tuple[dict[str, Any], int]:
 def command_host_init(context: Context, name: str) -> tuple[dict[str, Any], int]:
     if not re.fullmatch(r"[a-z0-9][a-z0-9_-]*", name):
         raise ValueError("host name must match [a-z0-9][a-z0-9_-]*")
-    target = context.config_base.parent / "hosts" / f"{name}.toml"
+    target = context.config_default_source.parent / f"config-{name}.toml"
     if target.exists():
-        raise ValueError(f"host overlay already exists: {target}")
-    text = (
-        f"# Host-specific non-secret Codex settings for {name}.\n"
-        "# Keep secrets in environment variables or Codex credential storage.\n"
-    )
-    atomic_write(target, text.encode(), mode=0o644)
+        raise ValueError(f"host config already exists: {target}")
+    atomic_write(target, context.config_default_source.read_bytes(), mode=0o644)
     return {"host": name, "path": str(target)}, EXIT_OK
 
 
@@ -954,9 +1065,10 @@ def command_external_review(
 
 
 _SENSITIVE_NAME = re.compile(
-    r"(?:token|secret|password|credential|auth[_-]?key|api[_-]?key)",
+    r"(?:token(?![_-]?limit)|secret|password|credential|auth[_-]?key|api[_-]?key)",
     re.IGNORECASE,
 )
+_SENSITIVE_LITERAL = re.compile(r"authorization:\s*bearer\s+(?!REPLACE_ME\b)\S+", re.IGNORECASE)
 _ASSIGNMENT = re.compile(
     r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_-]*)\s*=\s*(.+?)\s*$"
 )
@@ -987,6 +1099,8 @@ def _walk_sensitive_keys(value: Any, path: tuple[str, ...] = ()) -> list[tuple[s
     elif isinstance(value, list):
         for child in value:
             findings.extend(_walk_sensitive_keys(child, path))
+    elif isinstance(value, str) and _SENSITIVE_LITERAL.search(value):
+        findings.append(path or ("<value>",))
     return findings
 
 
@@ -1033,6 +1147,33 @@ def _version_tuple(value: str) -> tuple[int, ...]:
     return tuple(int(part) for part in match.group(1).split("."))
 
 
+def _config_source_paths(context: Context) -> tuple[Path, ...]:
+    return tuple(sorted(context.config_default_source.parent.glob("config-*.toml")))
+
+
+def _config_source_has_required_settings(data: Mapping[str, Any]) -> bool:
+    if not all(isinstance(data.get(key), str) and data.get(key) for key in (
+        "personality",
+        "model",
+        "model_reasoning_effort",
+    )):
+        return False
+    features = data.get("features")
+    agents = data.get("agents")
+    if not isinstance(features, Mapping):
+        return False
+    if not isinstance(agents, Mapping):
+        return False
+    return (
+        features.get("multi_agent") is True
+        and isinstance(features.get("js_repl"), bool)
+        and type(agents.get("max_threads")) is int
+        and agents.get("max_threads") == 4
+        and type(agents.get("max_depth")) is int
+        and agents.get("max_depth") == 1
+    )
+
+
 def command_doctor(context: Context) -> tuple[dict[str, Any], int]:
     checks: list[dict[str, str]] = []
 
@@ -1063,9 +1204,8 @@ def command_doctor(context: Context) -> tuple[dict[str, Any], int]:
         else "local skill preferences are invalid",
     )
 
-    toml_paths = [context.config_base, context.host_overlay]
-    if context.local_overlay:
-        toml_paths.append(context.local_overlay)
+    config_sources = _config_source_paths(context)
+    toml_paths = list(config_sources)
     toml_paths.extend(asset.source for asset in context.assets if asset.category in {"agents", "profiles"})
     try:
         for path in toml_paths:
@@ -1073,6 +1213,22 @@ def command_doctor(context: Context) -> tuple[dict[str, Any], int]:
         add("toml", True, "managed TOML sources parse")
     except (OSError, tomllib.TOMLDecodeError):
         add("toml", False, "one or more managed TOML sources do not parse")
+
+    config_sources_ok = bool(config_sources)
+    try:
+        config_sources_ok = config_sources_ok and all(
+            _config_source_has_required_settings(tomllib.loads(path.read_text()))
+            for path in config_sources
+        )
+    except (OSError, tomllib.TOMLDecodeError):
+        config_sources_ok = False
+    add(
+        "config-sources",
+        config_sources_ok,
+        "all host configs are secret-free and contain required multi-agent keys"
+        if config_sources_ok
+        else "one or more host configs are missing required settings",
+    )
 
     guidance = (context.root / "AGENTS.md").read_text()
     headings = (
@@ -1131,16 +1287,23 @@ def command_doctor(context: Context) -> tuple[dict[str, Any], int]:
     config_ok = False
     try:
         state = read_state(context.state_path)
-        preview = preview_config(context)
-        owned = sorted(tuple(path) for path in state.get("managed_paths", []))
-        expected = sorted(tuple(path) for path in preview["managed_paths"])
-        live_path = context.codex_home / "config.toml"
-        if live_path.exists():
-            tomllib.loads(live_path.read_text())
-        config_ok = live_path.is_file() and not live_path.is_symlink() and owned == expected and not preview["changes"]
+        selected_config = config_asset(context)
+        recorded = state.get("assets", {}).get(selected_config.id, {})
+        tomllib.loads(selected_config.source.read_text())
+        config_ok = (
+            _link_matches(selected_config.target, selected_config.source)
+            and recorded.get("source") == str(selected_config.source)
+            and recorded.get("target") == str(selected_config.target)
+        )
     except (OSError, ValueError, json.JSONDecodeError, tomllib.TOMLDecodeError):
         config_ok = False
-    add("config", config_ok, "live config parses and owned paths match" if config_ok else "managed config drift detected")
+    add(
+        "config",
+        config_ok,
+        "live config links to the selected host source and matches state"
+        if config_ok
+        else "managed config link or selected host state drift detected",
+    )
 
     flagged_sources = _secret_findings(context)
     add(
@@ -1270,7 +1433,12 @@ def main(argv: list[str] | None = None) -> int:
     root = Path(__file__).resolve().parents[1]
     manifest = args.manifest or root / "manifest.toml"
     try:
-        context = load_context(root, manifest, args.host, os.environ)
+        context_env: Mapping[str, str] = os.environ
+        context_host = args.host
+        if args.command == "host" and args.host_command == "init":
+            context_env = {key: value for key, value in os.environ.items() if key != "CODEX_HELPER_HOST"}
+            context_host = None
+        context = load_context(root, manifest, context_host, context_env)
         if args.command == "plan":
             payload, code = command_plan(context)
         elif args.command == "status":

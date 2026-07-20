@@ -1,4 +1,7 @@
 interface:
   display_name: "Feature Delivery"
-  short_description: "Plan, implement, review, and verify a bounded feature"
-  default_prompt: "Use planner and optional scanner evidence, apply the root plan gate, assign a bounded developer, then run reviewer and verifier before root integration."
+  short_description: "Explicit, root-first feature delivery workflow"
+  default_prompt: "Use $feature-delivery for this task. Subagents are authorized; if you delegate, let each subagent perform its assigned scope."
+
+policy:
+  allow_implicit_invocation: false

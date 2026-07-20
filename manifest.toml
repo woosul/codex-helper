@@ -1,18 +1,22 @@
-schema_version = 1
-harness_version = "0.3.0"
+schema_version = 2
+harness_version = "0.4.1"
 minimum_codex_version = "0.144.5"
 
 [paths]
 codex_home = "${CODEX_HOME:-$HOME/.codex}"
+config_home = "$HOME/.codex"
 user_skills = "$HOME/.agents/skills"
 user_bin = "$HOME/.local/bin"
 
 [config]
-base = "sources/config/base.toml"
-host_dir = "sources/config/hosts"
-state = "${CODEX_HOME:-$HOME/.codex}/.codex-helper/state.json"
-preferences = "${CODEX_HOME:-$HOME/.codex}/.codex-helper/preferences.toml"
-backups = "${CODEX_HOME:-$HOME/.codex}/backups/codex-helper"
+source_pattern = "sources/config/config-{host}.toml"
+default_source = "sources/config/config-default.toml"
+target = "$HOME/.codex/config.toml"
+asset_id = "global-config"
+asset_version = "1.2.0"
+state = "$HOME/.codex/.codex-helper/state.json"
+preferences = "$HOME/.codex/.codex-helper/preferences.toml"
+backups = "$HOME/.codex/backups/codex-helper"
 
 [[assets]]
 id = "global-agents"
@@ -134,7 +138,7 @@ enabled = true
 source = "sources/skills/feature-delivery"
 target = "$HOME/.agents/skills/feature-delivery"
 scope = "global"
-version = "1.0.0"
+version = "1.2.0"
 upstream = "https://learn.chatgpt.com/docs/agent-configuration/subagents"
 license = "local-adaptation"
 last_reviewed = "2026-07-20"

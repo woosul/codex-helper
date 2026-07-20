@@ -1,6 +1,6 @@
 # 사용자 가이드
 
-이 저장소는 Codex 전역 지침, 설정 조각, read-only 에이전트, 스킬, 유틸리티의 원본을 Git으로 관리하고 각 런타임 위치에는 개별 심볼릭 링크만 배선한다. `~/.codex/config.toml`만 예외로, 사용자 설정을 보존하면서 manifest 소유 키만 병합하는 실제 파일이다.
+이 저장소는 Codex 전역 지침, 호스트별 설정, read-only 에이전트, 스킬, 유틸리티의 원본을 Git으로 관리하고 각 런타임 위치에는 개별 심볼릭 링크만 배선한다. `~/.codex/config.toml`도 선택된 `sources/config/config-<host>.toml`을 가리키는 `global-config` 링크다.
 
 ## 처음 설치와 다른 머신 연결
 
@@ -10,7 +10,7 @@ cd codex-helper
 ./install.sh --host <machine-name>
 ```
 
-새 머신 이름이 필요하면 먼저 `./bin/codex-harness host init <machine-name>`으로 `sources/config/hosts/<machine-name>.toml`을 만들고 커밋한다. 설치 계획을 확인한 다음 적용하고, `$HOME/.local/bin`을 `PATH`에 넣은 뒤 Codex를 다시 시작한다. 자세한 절차는 `docs/cross-machine-bootstrap.md`에 있다.
+새 머신 이름이 필요하면 먼저 `./bin/codex-harness host init <machine-name>`으로 safe default를 복사한 `sources/config/config-<machine-name>.toml`을 만들고 검토·커밋한다. 설치 계획을 확인한 다음 적용하고, `$HOME/.local/bin`을 `PATH`에 넣은 뒤 Codex를 다시 시작한다. 자세한 절차는 `docs/cross-machine-bootstrap.md`에 있다.
 
 ## 일상 운용
 
@@ -31,7 +31,7 @@ codex-harness doctor --json
 - `snapshot --json`: 수동 유지보수 전 복구 지점을 만든다.
 - `apply --yes`: 검토한 계획을 트랜잭션으로 적용한다. 실패하면 직전 스냅샷으로 자동 복구한다.
 - `restore ID --yes`: 선택한 스냅샷으로 되돌린다.
-- `unlink --yes`: 이 하네스가 소유한 배선과 설정 키만 해제한다.
+- `unlink --yes`: 이 하네스가 소유한 링크를 해제하고 기록된 config 원본을 권한 `0600`의 실제 파일로 만든다.
 
 정상 업데이트는 다음 네 명령으로 충분하다.
 
@@ -46,13 +46,13 @@ codex-harness doctor
 
 ### 기능 전달 워크플로
 
-`$feature-delivery`를 사용할 수 있고 활성화되어 있으면 비사소한 기능, 여러 파일에 걸친 모호한 변경, 또는 명시적인 다중 에이전트 전달 요청에 사용한다. 기본 흐름은 planner/scanner → root plan gate → developer → reviewer/verifier → root integration이다.
+`$feature-delivery`는 사용자가 명시적으로 요청할 때만 실행한다. 작업 크기, 파일 수, 모호성 또는 구현 복잡성만으로 자동 활성화하지 않는다.
 
 `feature-delivery`가 없거나 머신 로컬에서 비활성화되어 있으면 전역 지침은 사용할 수 없는 스킬을 요구하지 않는다. 루트는 누락된 스킬을 호출하지 않고 인라인 또는 루트가 선택한 다른 워크플로로 계속할 수 있다.
 
-실행 전략을 따로 지정하지 않으면 **기본 Subagent-Driven**으로 동작한다. 루트는 작업 범위의 **인라인 override**로 실행 모드, 역할, 순서, 수정 루프를 추가·제거·재정렬·생략할 수 있다. 다만 위임된 역할은 이 워크플로에 다시 진입하지 않는다. 사소한 편집은 이 협업 비용이 더 크므로 제외한다.
+실행 전략은 **기본 Root-Inline**이다. 마스터가 직접 계획, 구현, 리뷰, 검증할 수 있다. 다만 `$feature-delivery` 명시 호출은 서브에이전트 사용을 허가하며 별도 서브에이전트 요청은 필요하지 않다. 스킬 이름을 단순 지칭하거나 계약을 수정하는 것은 호출이 아니다.
 
-개발자는 한 checkout에서 한 명만 쓰며, 여러 개발자가 필요하면 각각 **별도 worktree**를 사용한다. developer 프로필의 기본값은 `workspace-write`이지만 실제 편집은 부모 작업과 **사용자/시스템 권한 경계** 안에서만 가능하다. 수정 루프는 **기본 세 번**이고 루트가 조정할 수 있다. 최종 통합과 **커밋과 푸시**는 루트 책임이지만 사용자/시스템 권한이 허용할 때만 수행한다.
+마스터가 planner/scanner/developer/reviewer/verifier에 작업을 위임하면 해당 범위는 서브에이전트가 수행하고, 마스터는 같은 작업을 중복 수행하지 않는다. 마스터는 조정, 통합 또는 명확히 겹치지 않는 작업만 계속한다. 단일 developer에게 별도 worktree를 강제하지 않는다. 순차 위임도 active checkout을 사용할 수 있다. 다만 두 번째 동시 developer를 시작할 때는 worktree 존재를 확인하고, 없으면 생성한 뒤 작업을 시작한다. 동시에 실행되는 writable developer는 같은 checkout을 공유하지 않는다. developer 프로필의 기본값은 `workspace-write`이고 실제 편집은 **사용자/시스템 권한 경계** 안에서만 가능하다. 수정 루프는 **기본 세 번**이고 최종 통합과 **커밋과 푸시**는 루트 책임이다.
 
 활동 표시는 루트가 `role instance - task name` 형식으로 부여한다. 예: `developer 1 - implement role badges`, `reviewer 2 - review role quality`. 반복 역할 번호는 새 스레드마다 단조 증가하며, 동일 스레드에 follow-up을 보낼 때만 기존 번호를 재사용한다. native badge의 폭과 **말줄임**은 **client-owned**이므로 하네스가 설정할 수 없으며, 루트는 전체 **본문 label**을 dispatch·progress·completion 본문에 유지한다.
 
@@ -124,14 +124,20 @@ codex-harness skill reset parallel-review
 
 링크를 손으로 지우면 local override가 없으므로 `status`가 드리프트로 보고하고 다음 `apply`가 기본값에 맞춰 복구한다. 새 상태는 새 Codex 작업부터 확실히 적용된다. 이미 열린 작업은 로드된 스킬 지침을 문맥에 보유할 수 있다.
 
-## 설정과 호스트 오버레이
+## 설정과 호스트 선택
 
-- 공통 비밀 없는 설정: `sources/config/base.toml`
-- 머신별 추적 설정: `sources/config/hosts/<name>.toml`
-- 머신별 비추적 설정: `sources/config/hosts/<name>.local.toml`
-- 인증 정보와 토큰: 환경 변수 또는 Codex 자격 증명 저장소
+- 안전한 미등록 머신 기본값: `sources/config/config-default.toml`
+- 머신별 Git 추적 설정: `sources/config/config-<name>.toml`
+- 선택 순서: `--host` > `CODEX_HELPER_HOST` > 소문자 short hostname
+- 인증 정보와 토큰: 프로젝트 루트의 Git 제외 파일 `.env-<name>`
 
-라이브 `config.toml` 전체를 링크하거나 덮어쓰지 않는다. 하네스는 자신이 관리하는 TOML 경로만 상태 파일에 기록해 이후 업데이트와 unlink에서 사용자 소유 설정을 보존한다.
+`GEMS.local`은 `gems`로 정규화된다. 명시 옵션이나 환경 변수가 가리키는 파일이 없으면 오타로 보고 fail-closed하고, 자동 감지한 hostname만 미등록이면 plan에 fallback을 표시하며 default를 선택한다.
+
+전역 설정 대상은 런타임 `CODEX_HOME` 값과 무관하게 항상 `$HOME/.codex/config.toml`이다. 선택된 Git 원본으로 심볼릭 링크하며, 두 번째 적용은 no-op이다. 호스트 변경은 plan/status에서 drift로 나타난다.
+
+호스트별 config에는 머신 경로, MCP 정의, 플러그인 선택, 프로젝트 신뢰 설정과 UI 설정을 포함할 수 있다. 모든 v0.4.1 config에는 `features.multi_agent = true`, `agents.max_threads = 4`, `agents.max_depth = 1`이 필요하다.
+
+Git config에는 비밀값만 제외한 해당 머신의 실제 설정을 둔다. n8n 인증 헤더처럼 민감한 값은 `.env-gems` 또는 `.env-rock`에 두고, Git에는 대응하는 `.example`만 남긴다. `bin/codex-mcp-env`가 호스트 파일을 읽어 MCP 프로세스에 값을 전달하며, `doctor`는 추적 TOML의 literal bearer 값을 검사한다.
 
 ## 장애 대응
 

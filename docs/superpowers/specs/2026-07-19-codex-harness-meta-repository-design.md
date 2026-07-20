@@ -3,6 +3,8 @@
 **Date:** 2026-07-19  
 **Status:** Approved design
 
+> **Superseded:** This historical v0.3 design describes merge-owned config behavior. Use the current [architecture](../../architecture.md) and [cross-machine bootstrap](../../cross-machine-bootstrap.md) documents for the v0.4 host-config symlink contract and migration steps.
+
 **Scope:** Personal, cross-machine Codex CLI and desktop harness management
 
 ## 1. Intent

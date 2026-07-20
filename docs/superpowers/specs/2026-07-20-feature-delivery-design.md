@@ -1,5 +1,7 @@
 # Feature Delivery Multi-Agent Workflow Design
 
+> Superseded behavior: feature-delivery 1.2.0 is explicit-only and Root-Inline by default. An active invocation authorizes subagents, and delegated scopes are performed exclusively by their assigned subagents. The remainder records the original 1.0.0 design.
+
 **Date:** 2026-07-20
 **Status:** Approved for implementation
 **Scope:** Add planner and developer custom agents plus one reusable feature-delivery skill.

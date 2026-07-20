@@ -1,5 +1,7 @@
 # Feature Delivery Multi-Agent Workflow Implementation Plan
 
+> Historical plan: feature-delivery 1.2.0 is explicit-only, permits subagents on active invocation, and assigns exclusive execution ownership to each delegated scope.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add planner and developer custom agents and an enabled-by-default feature-delivery skill that orchestrates planning, bounded implementation, independent validation, and root-owned integration.
