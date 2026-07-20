@@ -55,5 +55,6 @@ These instructions are the personal default for Codex across repositories. More 
 ## Harness Independence
 
 - `codex-helper` is the sole source repository for the Codex harness.
-- Never read, search, diff, execute, or modify the sibling Claude harness repository.
+- Read-only inspection of the sibling Claude harness requires explicit user approval. After approval, reading, searching, and diffing are allowed within the approved scope.
+- Executing or modifying the sibling Claude harness requires separate explicit user authorization.
 - Managed Codex links must resolve inside `codex-helper`; runtime-owned Codex state remains outside Git.

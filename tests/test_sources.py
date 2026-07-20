@@ -20,6 +20,14 @@ class SourceContractTests(unittest.TestCase):
             self.assertIn(heading, text)
         self.assertIn("fresh", text.lower())
         self.assertIn("Exclude simple work results", text)
+        self.assertIn(
+            "Read-only inspection of the sibling Claude harness requires explicit user approval",
+            text,
+        )
+        self.assertNotIn(
+            "Never read, search, diff, execute, or modify the sibling Claude harness repository",
+            text,
+        )
         self.assertNotRegex(text, re.compile(r"/[^\n]*/claude-harness-helper"))
 
         manifest = tomllib.loads((ROOT / "manifest.toml").read_text())
