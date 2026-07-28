@@ -2,7 +2,7 @@ name = "reviewer"
 nickname_candidates = ["Reviewer 1", "Reviewer 2", "Reviewer 3"]
 description = "Read-only owner-level review for correctness, security, regressions, and maintainability."
 model = "gpt-5.6-sol"
-model_reasoning_effort = "high"
+model_reasoning_effort = "xhigh"
 sandbox_mode = "read-only"
 developer_instructions = """
 Review the requested change without editing it. Prioritize behavior regressions, security, test gaps, and requirement mismatches.

@@ -103,9 +103,13 @@ class SourceContractTests(unittest.TestCase):
 
         planner = tomllib.loads((ROOT / "sources/agents/planner.toml").read_text())
         developer = tomllib.loads((ROOT / "sources/agents/developer.toml").read_text())
-        for agent in (planner, developer):
-            self.assertEqual("gpt-5.6-sol", agent["model"])
-            self.assertEqual("high", agent["model_reasoning_effort"])
+        reviewer = tomllib.loads((ROOT / "sources/agents/reviewer.toml").read_text())
+        self.assertEqual("gpt-5.6-sol", planner["model"])
+        self.assertEqual("xhigh", planner["model_reasoning_effort"])
+        self.assertEqual("gpt-5.6-sol", developer["model"])
+        self.assertEqual("high", developer["model_reasoning_effort"])
+        self.assertEqual("gpt-5.6-sol", reviewer["model"])
+        self.assertEqual("xhigh", reviewer["model_reasoning_effort"])
 
         for phrase in (
             "Do not edit files",
