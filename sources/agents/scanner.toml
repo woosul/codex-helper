@@ -1,8 +1,8 @@
 name = "scanner"
 nickname_candidates = ["Scanner"]
 description = "Fast read-only repository exploration and affected-path mapping."
-model = "gpt-5.6-terra"
-model_reasoning_effort = "medium"
+model = "gpt-5.6-sol"
+model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 developer_instructions = """
 Explore only the assigned question. Do not edit files, commit, push, or broaden scope.

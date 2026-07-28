@@ -103,13 +103,6 @@ class SourceContractTests(unittest.TestCase):
 
         planner = tomllib.loads((ROOT / "sources/agents/planner.toml").read_text())
         developer = tomllib.loads((ROOT / "sources/agents/developer.toml").read_text())
-        reviewer = tomllib.loads((ROOT / "sources/agents/reviewer.toml").read_text())
-        self.assertEqual("gpt-5.6-sol", planner["model"])
-        self.assertEqual("xhigh", planner["model_reasoning_effort"])
-        self.assertEqual("gpt-5.6-sol", developer["model"])
-        self.assertEqual("high", developer["model_reasoning_effort"])
-        self.assertEqual("gpt-5.6-sol", reviewer["model"])
-        self.assertEqual("xhigh", reviewer["model_reasoning_effort"])
 
         for phrase in (
             "Do not edit files",
@@ -133,6 +126,35 @@ class SourceContractTests(unittest.TestCase):
             "separate worktrees",
         ):
             self.assertIn(phrase, developer["developer_instructions"])
+
+    def test_agent_and_profile_model_assignments(self):
+        expected_agents = {
+            "scanner": ("gpt-5.6-sol", "high"),
+            "planner": ("gpt-5.6-sol", "xhigh"),
+            "developer": ("gpt-5.6-sol", "xhigh"),
+            "reviewer": ("gpt-5.6-sol", "xhigh"),
+            "verifier": ("gpt-5.6-sol", "xhigh"),
+        }
+        expected_profiles = {
+            "deep-review.config": ("gpt-5.6-sol", "max"),
+            "fast-scan.config": ("gpt-5.6-sol", "high"),
+        }
+
+        for name, (model, effort) in expected_agents.items():
+            with self.subTest(agent=name):
+                data = tomllib.loads(
+                    (ROOT / f"sources/agents/{name}.toml").read_text()
+                )
+                self.assertEqual(model, data["model"])
+                self.assertEqual(effort, data["model_reasoning_effort"])
+
+        for name, (model, effort) in expected_profiles.items():
+            with self.subTest(profile=name):
+                data = tomllib.loads(
+                    (ROOT / f"sources/profiles/{name}.toml").read_text()
+                )
+                self.assertEqual(model, data["model"])
+                self.assertEqual(effort, data["model_reasoning_effort"])
 
     def test_manifest_targets_are_unique(self):
         data = tomllib.loads((ROOT / "manifest.toml").read_text())
