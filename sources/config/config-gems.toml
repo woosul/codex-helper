@@ -128,6 +128,9 @@ trust_level = "trusted"
 [projects."/Users/denny/SynologyDrive/01_Share/33_DEVELOPMENT/fastflow"]
 trust_level = "trusted"
 
+[projects."/Users/denny/Library/Application Support/orca/rate-limit-pty-cwd"]
+trust_level = "trusted"
+
 [tui]
 status_line = ["model-with-reasoning", "current-dir", "git-branch", "branch-changes", "context-used", "five-hour-limit", "weekly-limit", "codex-version", "context-window-size", "task-progress"]
 status_line_use_colors = true
@@ -152,3 +155,29 @@ conversationDetailMode = "STEPS_COMMANDS"
 BROWSER_USE_AVAILABLE_BACKENDS = "chrome,iab"
 NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "461c4ba94b821ec805da79c8e8138fe510b1b3358609fc93da47387a2cf3fbf3,6d25aa7656feac858f3a3bdaea5bcbab0dbfd426c9de8e6931ce90c399ee8e4f"
 NODE_REPL_TRUSTED_CODE_PATHS = "/Users/denny/.codex"
+
+[hooks.state]
+
+[hooks.state."/Users/denny/.codex/hooks.json:pre_tool_use:0:0"]
+trusted_hash = "sha256:1c0cec71b8632b6ef3dca975cc4cac9d1b24a585192c230683fbb5a24483b37d"
+
+[hooks.state."/Users/denny/.codex/hooks.json:permission_request:0:0"]
+trusted_hash = "sha256:73b54aef9a4986f6af04cb52078f2710f5b1cce592739a7655f0d350f9a8026a"
+
+[hooks.state."/Users/denny/.codex/hooks.json:post_tool_use:0:0"]
+trusted_hash = "sha256:05d61ab4fa82596cd521603a63934da9b8124de9ea0f47653dbf0e90c33df591"
+
+[hooks.state."/Users/denny/.codex/hooks.json:session_start:0:0"]
+trusted_hash = "sha256:4acb6e20e52abbb5db7867d32769deae019a22fcdaebfb551008f0af08fd33a7"
+
+[hooks.state."/Users/denny/.codex/hooks.json:user_prompt_submit:0:0"]
+trusted_hash = "sha256:a4b7111c99e00091b8cf5774b4daefbe70b9863df864893f7c4554ffa7990767"
+
+[hooks.state."/Users/denny/.codex/hooks.json:subagent_start:0:0"]
+trusted_hash = "sha256:83fe5dd9cbe670362a1fb0760e71f7f2f0611b9bca32e9bf162afbd5e158cbd7"
+
+[hooks.state."/Users/denny/.codex/hooks.json:subagent_stop:0:0"]
+trusted_hash = "sha256:a6599bf8344f697c6985a3505a1dde60c5a758177a7ddfbb558b123e1adc49a3"
+
+[hooks.state."/Users/denny/.codex/hooks.json:stop:0:0"]
+trusted_hash = "sha256:e6151ca84cb3bb8686848c9ca0e03ef7e1633f578fc4ba7a981861e8d8286369"
