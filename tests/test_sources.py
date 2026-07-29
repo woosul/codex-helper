@@ -34,7 +34,8 @@ class SourceContractTests(unittest.TestCase):
         global_agents = next(
             asset for asset in manifest["assets"] if asset["id"] == "global-agents"
         )
-        self.assertEqual("1.0.1", global_agents["version"])
+        self.assertEqual("1.0.2", global_agents["version"])
+        self.assertIn("Five cycles are the default", text)
 
     def test_manifest_and_toml_sources_parse(self):
         paths = [
@@ -202,7 +203,7 @@ class SourceContractTests(unittest.TestCase):
         self.assertEqual("skills", skill["category"])
         self.assertEqual("sources/skills/feature-delivery", skill["source"])
         self.assertEqual("$HOME/.agents/skills/feature-delivery", skill["target"])
-        self.assertEqual("1.2.0", skill["version"])
+        self.assertEqual("1.2.1", skill["version"])
         self.assertTrue(skill["enabled"])
 
     def test_feature_delivery_skill_contract(self):
@@ -227,7 +228,7 @@ class SourceContractTests(unittest.TestCase):
             "Before starting a second concurrent developer",
             "verify that it has a separate worktree",
             "create one before work begins",
-            "three-cycle default",
+            "five-cycle default",
             "add, remove, reorder, or skip",
             "The root agent owns commits, pushes, and final integration",
             "delegating parent/root task remains persistent until every spawned subagent has returned",
@@ -294,6 +295,15 @@ class SourceContractTests(unittest.TestCase):
         self.assertIn("Do not delegate concurrent writes", text)
         self.assertIn("persistent parent task", text)
         self.assertIn("Do not run this workflow with `codex exec --ephemeral`", text)
+
+    def test_dual_loop_review_skill_contract(self):
+        manifest = tomllib.loads((ROOT / "manifest.toml").read_text())
+        assets = {asset["id"]: asset for asset in manifest["assets"]}
+        self.assertEqual("1.1.0", assets["skill-dual-loop-review"]["version"])
+
+        text = (ROOT / "sources/skills/dual-loop-review/SKILL.md").read_text()
+        self.assertIn("cycles 3 through 5", text)
+        self.assertIn("Never exceed five cycles", text)
 
     def test_operator_docs_exist_and_readme_links_them(self):
         readme = (ROOT / "README.md").read_text()
@@ -384,7 +394,7 @@ class SourceContractTests(unittest.TestCase):
             "두 번째 동시 developer",
             "worktree 존재를 확인",
             "없으면 생성한 뒤",
-            "기본 세 번",
+            "기본 다섯 번",
             "workspace-write",
             "사용자/시스템 권한 경계",
             "커밋과 푸시",
@@ -401,7 +411,8 @@ class SourceContractTests(unittest.TestCase):
         self.assertNotIn("기본 Subagent-Driven", guide)
 
         rollout = (ROOT / "docs/cross-machine-bootstrap.md").read_text()
-        self.assertIn("feature-delivery 1.2.0", rollout)
+        self.assertIn("feature-delivery 1.2.1", rollout)
+        self.assertIn("five cycles", rollout)
         self.assertIn("second concurrent developer", rollout)
         self.assertIn("git pull --ff-only", rollout)
         self.assertIn("codex-harness apply --yes", rollout)

@@ -56,7 +56,7 @@ Claude Code에서 Codex를 계획·코드 리뷰 전용 에이전트로 호출�
 ## 이 저장소에 적용한 선택
 
 - `parallel-review`: persistent 부모 task 아래 scanner/reviewer/verifier를 bounded read-only로 실행한다.
-- `dual-loop-review`: 신선한 로컬 검증 증거 뒤 별도 `codex exec --ephemeral --sandbox read-only` 프로세스를 최대 세 번 호출하고 JSON schema verdict를 강제한다.
+- `dual-loop-review`: 신선한 로컬 검증 증거 뒤 별도 `codex exec --ephemeral --sandbox read-only` 프로세스를 최대 다섯 번 호출하고 JSON schema verdict를 강제한다.
 - 쓰기 권한과 최종 판정은 루트 에이전트에만 둔다.
 - 외부 오케스트레이터나 Claude 플러그인은 사용자 런타임 소유이므로 이 저장소가 자동 설치하거나 설정을 덮어쓰지 않는다.
 

@@ -105,7 +105,7 @@ scanner 커스텀 에이전트를 하나 실행해서 README의 첫 제목만 �
 
 실행 전략은 **기본 Root-Inline**이다. 마스터가 직접 계획, 구현, 리뷰, 검증할 수 있다. 다만 `$feature-delivery` 명시 호출은 서브에이전트 사용을 허가하며 별도 서브에이전트 요청은 필요하지 않다. 스킬 이름을 단순 지칭하거나 계약을 수정하는 것은 호출이 아니다.
 
-마스터가 planner/scanner/developer/reviewer/verifier에 작업을 위임하면 해당 범위는 서브에이전트가 수행하고, 마스터는 같은 작업을 중복 수행하지 않는다. 마스터는 조정, 통합 또는 명확히 겹치지 않는 작업만 계속한다. 단일 developer에게 별도 worktree를 강제하지 않는다. 순차 위임도 active checkout을 사용할 수 있다. 다만 두 번째 동시 developer를 시작할 때는 worktree 존재를 확인하고, 없으면 생성한 뒤 작업을 시작한다. 동시에 실행되는 writable developer는 같은 checkout을 공유하지 않는다. developer 프로필의 기본값은 `workspace-write`이고 실제 편집은 **사용자/시스템 권한 경계** 안에서만 가능하다. 수정 루프는 **기본 세 번**이고 최종 통합과 **커밋과 푸시**는 루트 책임이다.
+마스터가 planner/scanner/developer/reviewer/verifier에 작업을 위임하면 해당 범위는 서브에이전트가 수행하고, 마스터는 같은 작업을 중복 수행하지 않는다. 마스터는 조정, 통합 또는 명확히 겹치지 않는 작업만 계속한다. 단일 developer에게 별도 worktree를 강제하지 않는다. 순차 위임도 active checkout을 사용할 수 있다. 다만 두 번째 동시 developer를 시작할 때는 worktree 존재를 확인하고, 없으면 생성한 뒤 작업을 시작한다. 동시에 실행되는 writable developer는 같은 checkout을 공유하지 않는다. developer 프로필의 기본값은 `workspace-write`이고 실제 편집은 **사용자/시스템 권한 경계** 안에서만 가능하다. 수정 루프는 **기본 다섯 번**이고 최종 통합과 **커밋과 푸시**는 루트 책임이다.
 
 활동 표시는 루트가 `role instance - task name` 형식으로 부여한다. 예: `developer 1 - implement role badges`, `reviewer 2 - review role quality`. 반복 역할 번호는 새 스레드마다 단조 증가하며, 동일 스레드에 follow-up을 보낼 때만 기존 번호를 재사용한다. native badge의 폭과 **말줄임**은 **client-owned**이므로 하네스가 설정할 수 없으며, 루트는 전체 **본문 label**을 dispatch·progress·completion 본문에 유지한다.
 
@@ -123,7 +123,7 @@ Codex 앱 또는 대화형 CLI 작업에서 `$parallel-review`를 명시적으�
 codex-external-review --repo "$PWD" --cycle 1 --evidence .codex-loop/evidence.md
 ```
 
-외부 프로세스는 ephemeral이며 JSON 스키마에 맞는 `pass`, `changes_requested`, `blocked` 판정만 반환한다. 수정 루프는 최대 세 번이고, 모든 지적은 현재 작업에서 다시 검증한다.
+외부 프로세스는 ephemeral이며 JSON 스키마에 맞는 `pass`, `changes_requested`, `blocked` 판정만 반환한다. 수정 루프는 최대 다섯 번이고, 모든 지적은 현재 작업에서 다시 검증한다.
 
 ## 스킬 추가
 

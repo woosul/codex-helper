@@ -38,7 +38,7 @@ Skill `enabled` defaults in `manifest.toml` travel with Git. Machine-local choic
 
 ## Skill behavior rollout
 
-`manifest.toml` records feature-delivery 1.2.0. It remains implicit-invocation disabled: mentioning or editing the skill is not a workflow call. An active explicit invocation authorizes subagents, and each delegated scope is performed by its assigned subagent without overlapping root execution. A single developer does not require a separate worktree; before a second concurrent developer starts, verify or create an isolated worktree.
+`manifest.toml` records feature-delivery 1.2.1 and dual-loop-review 1.1.0. Feature-delivery uses five cycles by default, while dual-loop-review permits at most five external cycles. Feature-delivery remains implicit-invocation disabled: mentioning or editing the skill is not a workflow call. An active explicit invocation authorizes subagents, and each delegated scope is performed by its assigned subagent without overlapping root execution. A single developer does not require a separate worktree; before a second concurrent developer starts, verify or create an isolated worktree.
 
 Apply this contract on another machine with:
 

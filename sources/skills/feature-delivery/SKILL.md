@@ -38,7 +38,7 @@ Use this variant after an explicit `$feature-delivery` invocation when the root 
 2. Apply the root plan gate and assign one `developer` an explicit scope and required tests.
 3. Do not require a separate worktree for a single developer or sequential developer assignments unless the root explicitly requests one. Before starting a second concurrent developer, verify that it has a separate worktree; create one before work begins if it does not. Concurrent developers must not share a writable checkout.
 4. Run `reviewer` and `verifier` after implementation.
-5. Return validated findings to the developer as a narrower assignment. The **three-cycle default** may be shortened or extended by the root with evidence.
+5. Return validated findings to the developer as a narrower assignment. The **five-cycle default** may be shortened or extended by the root with evidence.
 6. Perform final root verification and integration.
 
 ## Handoff Contract

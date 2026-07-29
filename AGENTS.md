@@ -49,7 +49,7 @@ These instructions are the personal default for Codex across repositories. More 
 - Once the root delegates a bounded task, the subagent owns and performs that scope. The root must not duplicate the delegated work and may continue only coordination, integration, or clearly non-overlapping work.
 - The root validates the plan and retains user communication, commits, pushes, and final integration.
 - Do not require a separate worktree for one developer or sequential developer assignments unless the root explicitly asks for one. Before starting a second concurrent developer, verify isolation and create one before dispatch if needed; concurrent developers must not share a writable checkout.
-- Three cycles are the default; the root may shorten or extend them with evidence.
+- Five cycles are the default; the root may shorten or extend them with evidence.
 - The coordinating root owns assigning every handoff label and tool ID: `role instance - task name`; repeatable-role numbers increase monotonically, are never recycled, and only same-thread follow-ups reuse them. Subagents echo their assigned label.
 
 ## Documentation

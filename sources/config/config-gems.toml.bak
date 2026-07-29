@@ -181,6 +181,3 @@ trusted_hash = "sha256:a6599bf8344f697c6985a3505a1dde60c5a758177a7ddfbb558b123e1
 
 [hooks.state."/Users/denny/.codex/hooks.json:stop:0:0"]
 trusted_hash = "sha256:e6151ca84cb3bb8686848c9ca0e03ef7e1633f578fc4ba7a981861e8d8286369"
-
-[projects."/Users/denny/project/fastflow"]
-trust_level = "trusted"

@@ -105,4 +105,4 @@ After local tests have fresh evidence:
 codex-external-review --repo "$PWD" --cycle 1 --evidence .codex-loop/evidence.md
 ```
 
-Validate every finding locally. A `changes_requested` verdict can lead to cycle 2; cycle 3 is reserved for a distinct remaining issue. Never exceed three cycles.
+Validate every finding locally. A `changes_requested` verdict can lead to cycle 2; cycles 3 through 5 are reserved for distinct remaining issues. Never exceed five cycles.

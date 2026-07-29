@@ -1022,8 +1022,8 @@ def command_external_review(
     cycle: int,
     evidence: Path | None,
 ) -> int:
-    if cycle < 1 or cycle > 3:
-        print("ERROR: cycle must be between 1 and 3", file=sys.stderr)
+    if cycle < 1 or cycle > 5:
+        print("ERROR: cycle must be between 1 and 5", file=sys.stderr)
         return EXIT_USAGE
     if not (repo / ".git").exists():
         print("ERROR: --repo must be a Git repository", file=sys.stderr)

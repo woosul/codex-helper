@@ -22,7 +22,7 @@ Authentication, sessions, logs, caches, databases, plugins, marketplaces, projec
 
 `parallel-review` coordinates bounded native scanner, reviewer, and verifier roles for independent read-heavy concerns. The root agent retains final judgment and all write authority.
 
-`dual-loop-review` first requires fresh local evidence, then invokes a separate ephemeral Codex process in a read-only sandbox with a structured verdict. It permits at most three cycles.
+`dual-loop-review` first requires fresh local evidence, then invokes a separate ephemeral Codex process in a read-only sandbox with a structured verdict. It permits at most five cycles.
 
 `feature-delivery` is explicit-only and root-inline by default. Mentioning or editing the skill is not activation. An active invocation authorizes subagents without a second request. A delegated scope has one active performer: the subagent owns and executes it while the root limits itself to coordination, integration, or non-overlapping work. Planner, scanner, reviewer, and verifier are read-only; the developer profile defaults to `workspace-write`; and the root retains integration authority.
 

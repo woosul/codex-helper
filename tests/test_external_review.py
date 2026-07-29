@@ -31,7 +31,7 @@ class ExternalReviewTests(unittest.TestCase):
             stub.chmod(0o755)
             env = {**os.environ, "PATH": f"{root}:{os.environ['PATH']}"}
             result = subprocess.run(
-                [str(CLI), "--repo", str(repo), "--cycle", "1"],
+                [str(CLI), "--repo", str(repo), "--cycle", "5"],
                 cwd=ROOT,
                 env=env,
                 text=True,
@@ -42,13 +42,14 @@ class ExternalReviewTests(unittest.TestCase):
             args = json.loads(log.read_text())
             self.assertIn("--ephemeral", args)
             self.assertEqual("read-only", args[args.index("--sandbox") + 1])
+            self.assertEqual("deep-review", args[args.index("--profile") + 1])
             self.assertIn("--output-schema", args)
 
-    def test_cycle_must_be_between_one_and_three(self):
+    def test_cycle_must_be_between_one_and_five(self):
         result = subprocess.run(
-            [str(CLI), "--repo", str(ROOT), "--cycle", "4"],
+            [str(CLI), "--repo", str(ROOT), "--cycle", "6"],
             text=True,
             capture_output=True,
         )
         self.assertEqual(2, result.returncode)
-        self.assertIn("cycle must be between 1 and 3", result.stderr)
+        self.assertIn("cycle must be between 1 and 5", result.stderr)

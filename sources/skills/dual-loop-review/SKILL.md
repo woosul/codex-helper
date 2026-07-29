@@ -18,7 +18,7 @@ description: Use after a non-trivial implementation when the user requests indep
 1. From the target repository, save evidence at `.codex-loop/evidence.md` and run `codex-external-review --repo "$PWD" --cycle 1 --evidence .codex-loop/evidence.md`.
 2. On `pass`, independently confirm the final diff and report completion.
 3. On `changes_requested`, validate each finding, apply only correct fixes in the active agent, rerun internal evidence, then run cycle 2.
-4. Use cycle 3 only when cycle 2 found a distinct actionable issue. Never exceed three cycles.
+4. Use cycles 3 through 5 only when the preceding cycle found a distinct actionable issue. Never exceed five cycles.
 5. On `blocked`, repeated findings, exhausted cycles, or missing authority, stop and report the exact blocker.
 
 ## Boundaries
