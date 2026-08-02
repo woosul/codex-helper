@@ -25,7 +25,7 @@ category = "guidance"
 source = "AGENTS.md"
 target = "${CODEX_HOME:-$HOME/.codex}/AGENTS.md"
 scope = "global"
-version = "1.0.2"
+version = "1.0.3"
 
 [[assets]]
 id = "agent-scanner"

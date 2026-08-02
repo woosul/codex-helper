@@ -34,7 +34,7 @@ class SourceContractTests(unittest.TestCase):
         global_agents = next(
             asset for asset in manifest["assets"] if asset["id"] == "global-agents"
         )
-        self.assertEqual("1.0.2", global_agents["version"])
+        self.assertEqual("1.0.3", global_agents["version"])
         self.assertIn("Five cycles are the default", text)
 
     def test_manifest_and_toml_sources_parse(self):
@@ -261,6 +261,16 @@ class SourceContractTests(unittest.TestCase):
         self.assertIn("The root handles tasks directly by default", guidance)
         self.assertIn("or explicitly invokes `$feature-delivery`", guidance)
         self.assertIn("Merely mentioning the skill", guidance)
+        self.assertIn(
+            "Absence from the model-visible `Available skills` list alone does not make "
+            "`$feature-delivery` unavailable",
+            guidance,
+        )
+        self.assertIn("remains active across context compaction", guidance)
+        self.assertIn(
+            "re-read `$HOME/.agents/skills/feature-delivery/SKILL.md`",
+            guidance,
+        )
         self.assertIn("authorizes subagents without a separate request", guidance)
         self.assertIn("the subagent owns and performs that scope", guidance)
         self.assertIn("must not duplicate the delegated work", guidance)

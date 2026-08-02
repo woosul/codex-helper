@@ -42,6 +42,9 @@ These instructions are the personal default for Codex across repositories. More 
 
 - Only invoke `$feature-delivery` when the user explicitly requests it. Do not infer activation from task size, ambiguity, file count, or implementation complexity.
 - Merely mentioning the skill, quoting its name, or editing its contract is not an invocation.
+- Absence from the model-visible `Available skills` list alone does not make `$feature-delivery` unavailable; an explicit invocation or injected `<skill>` contract makes it available.
+- Once explicitly invoked, the workflow remains active across context compaction until that delivery completes or the user cancels it.
+- If the full contract is no longer in context, re-read `$HOME/.agents/skills/feature-delivery/SKILL.md` before continuing.
 - If `$feature-delivery` is unavailable or disabled, the coordinating root may execute or reconfigure the workflow inline or use another chosen workflow; it must not attempt to invoke the missing skill.
 - The remaining rules in this section apply only while a feature-delivery workflow is active.
 - Start it only from the coordinating root task. As a delegated role in an active feature-delivery workflow, execute the bounded assignment directly; do not re-enter the workflow.

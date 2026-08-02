@@ -6,6 +6,7 @@ model_auto_compact_token_limit = 850000
 model_auto_compact_token_limit_scope = "total"
 
 notify = ["/Users/denny/.codex/computer-use/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient", "turn-ended"]
+approvals_reviewer = "user"
 
 [features]
 multi_agent = true
@@ -36,14 +37,14 @@ NODE_REPL_NODE_MODULE_DIRS = "/Applications/ChatGPT.app/Contents/Resources/cua_n
 NODE_REPL_NODE_PATH = "/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node"
 NODE_REPL_TRUSTED_CODE_PATHS = "/Users/denny/.codex"
 CODEX_HOME = "/Users/denny/.codex"
-NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "461c4ba94b821ec805da79c8e8138fe510b1b3358609fc93da47387a2cf3fbf3,6d25aa7656feac858f3a3bdaea5bcbab0dbfd426c9de8e6931ce90c399ee8e4f"
+NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "028a14b6eaa6d98dac2aae00764345ab9f244801ed8493d42b9af3be5575006e,f204d340535055781952b10ed396de20b842f00a19e430852f7e121ad1ce91f6"
 BROWSER_USE_AVAILABLE_BACKENDS = "chrome,iab"
 NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER = "Control the in-app browser in conjunction with the Browser Plugin."
 NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME = "Control the Chrome browser in conjunction with the Chrome Plugin. Prefer this method of controlling Chrome over alternatives (such as Computer Use) unless the user explicitly mentions an alternative."
 NODE_REPL_INSTRUCTIONS_USE_CASE_COMPUTER_USE = "Control desktop apps on macOS through Computer Use."
 BROWSER_USE_CODEX_APP_BUILD_FLAVOR = "prod"
-BROWSER_USE_CODEX_APP_VERSION = "26.715.31925"
-SKY_CUA_SERVICE_PATH = "/Users/denny/.codex/plugins/cache/openai-bundled/computer-use/1.0.1000451/Codex Computer Use.app"
+BROWSER_USE_CODEX_APP_VERSION = "26.727.51351"
+SKY_CUA_SERVICE_PATH = "/Users/denny/.codex/computer-use/Codex Computer Use.app"
 CODEX_CLI_PATH = "/Applications/ChatGPT.app/Contents/Resources/codex"
 
 [mcp_servers.openaiDeveloperDocs]
@@ -91,19 +92,19 @@ enabled = true
 [plugins."visualize@openai-bundled"]
 enabled = true
 
-[plugins."browser@openai-bundled"]
-enabled = true
-
 [plugins."template-creator@openai-primary-runtime"]
 enabled = true
 
+[plugins."browser@openai-bundled"]
+enabled = true
+
 [marketplaces.openai-bundled]
-last_updated = "2026-07-20T07:21:52Z"
+last_updated = "2026-08-01T04:06:35Z"
 source_type = "local"
 source = "/Users/denny/.codex/.tmp/bundled-marketplaces/openai-bundled"
 
 [marketplaces.openai-primary-runtime]
-last_updated = "2026-07-20T07:51:49Z"
+last_updated = "2026-08-01T22:14:09Z"
 source_type = "local"
 source = "/Users/denny/.cache/codex-runtimes/codex-primary-runtime/plugins/openai-primary-runtime"
 
@@ -147,5 +148,37 @@ conversationDetailMode = "STEPS_COMMANDS"
 
 [shell_environment_policy.set]
 BROWSER_USE_AVAILABLE_BACKENDS = "chrome,iab"
-NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "461c4ba94b821ec805da79c8e8138fe510b1b3358609fc93da47387a2cf3fbf3,6d25aa7656feac858f3a3bdaea5bcbab0dbfd426c9de8e6931ce90c399ee8e4f"
+NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "028a14b6eaa6d98dac2aae00764345ab9f244801ed8493d42b9af3be5575006e,f204d340535055781952b10ed396de20b842f00a19e430852f7e121ad1ce91f6"
 NODE_REPL_TRUSTED_CODE_PATHS = "/Users/denny/.codex"
+
+[hooks.state]
+
+[hooks.state."/Users/denny/.codex/hooks.json:pre_tool_use:0:0"]
+trusted_hash = "sha256:e17cdb187ea23382f6b1589a4fddd454369d07056c414c745f760cb62978ffbb"
+
+[hooks.state."/Users/denny/.codex/hooks.json:permission_request:0:0"]
+trusted_hash = "sha256:d3da03851f8a685846835ed4183064c30501786c07f14d962488134e46132971"
+
+[hooks.state."/Users/denny/.codex/hooks.json:post_tool_use:0:0"]
+trusted_hash = "sha256:a1f7fb81633a999963286a71b8405cccf8941c075f1d7f12693d0c2bb65fc9a9"
+
+[hooks.state."/Users/denny/.codex/hooks.json:session_start:0:0"]
+trusted_hash = "sha256:d39cd5740d32dcd77f0325c785c20b10b84c1f89c5dbcb652f32c6b6ad651e86"
+
+[hooks.state."/Users/denny/.codex/hooks.json:user_prompt_submit:0:0"]
+trusted_hash = "sha256:2880f47438b0e8b2930b19105a966355933078314df26f18436994d6dc108aef"
+
+[hooks.state."/Users/denny/.codex/hooks.json:subagent_start:0:0"]
+trusted_hash = "sha256:e2d9e96aaef557aed4db0ffa052dbf8fd8172be46d521e029e7bff1e63af30da"
+
+[hooks.state."/Users/denny/.codex/hooks.json:subagent_stop:0:0"]
+trusted_hash = "sha256:e986361868ee029d702b4f63f8264fddfbf12c9b323120fa0c60d197836f36b7"
+
+[hooks.state."/Users/denny/.codex/hooks.json:stop:0:0"]
+trusted_hash = "sha256:d90ab9780077b5a6b8257612cfdd57c3fb2785f7e0c90582625c26a9e6d5e7ee"
+
+[projects."/Users/denny/Project/claude-helper"]
+trust_level = "trusted"
+
+[projects."/Users/denny/Library/Application Support/orca/rate-limit-pty-cwd"]
+trust_level = "trusted"
