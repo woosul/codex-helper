@@ -7,6 +7,8 @@ model_auto_compact_token_limit_scope = "total"
 
 notify = ["/Users/denny/.codex/computer-use/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient", "turn-ended"]
 approvals_reviewer = "user"
+sandbox_mode = "danger-full-access"
+approval_policy = "never"
 
 [features]
 multi_agent = true
@@ -176,6 +178,9 @@ trusted_hash = "sha256:e986361868ee029d702b4f63f8264fddfbf12c9b323120fa0c60d1978
 
 [hooks.state."/Users/denny/.codex/hooks.json:stop:0:0"]
 trusted_hash = "sha256:d90ab9780077b5a6b8257612cfdd57c3fb2785f7e0c90582625c26a9e6d5e7ee"
+
+[hooks.state."/Users/denny/Project/fastflow/.codex/hooks.json:post_tool_use:0:0"]
+trusted_hash = "sha256:491dec8045fef3babc3e4260e989683dec5a16192e80c6852f136f2dd3e90a8a"
 
 [projects."/Users/denny/Project/claude-helper"]
 trust_level = "trusted"
