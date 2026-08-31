@@ -63,15 +63,19 @@ class SourceContractTests(unittest.TestCase):
             self.assertEqual(1, data["agents"]["max_depth"])
 
     def test_gems_context_window_and_compaction_threshold(self):
-        data = tomllib.loads((ROOT / "sources/config/config-gems.toml").read_text())
         manifest = tomllib.loads((ROOT / "manifest.toml").read_text())
-        self.assertEqual(1_000_000, data["model_context_window"])
-        self.assertEqual(850_000, data["model_auto_compact_token_limit"])
-        self.assertEqual(
-            data["model_context_window"] * 85 // 100,
-            data["model_auto_compact_token_limit"],
-        )
-        self.assertEqual("total", data["model_auto_compact_token_limit_scope"])
+        for config_name in ("config-gems.toml", "config-rock.toml"):
+            with self.subTest(config=config_name):
+                data = tomllib.loads(
+                    (ROOT / "sources/config" / config_name).read_text()
+                )
+                self.assertEqual(1_000_000, data["model_context_window"])
+                self.assertEqual(600_000, data["model_auto_compact_token_limit"])
+                self.assertEqual(
+                    data["model_context_window"] * 60 // 100,
+                    data["model_auto_compact_token_limit"],
+                )
+                self.assertEqual("total", data["model_auto_compact_token_limit_scope"])
         self.assertEqual("1.2.0", manifest["config"]["asset_version"])
 
     def test_agents_have_declared_role_permissions(self):
