@@ -2,7 +2,7 @@ personality = "pragmatic"
 model = "gpt-5.6-sol"
 model_reasoning_effort = "xhigh"
 model_context_window = 1000000
-model_auto_compact_token_limit = 850000
+model_auto_compact_token_limit = 600000
 model_auto_compact_token_limit_scope = "total"
 
 notify = ["/Users/denny/.codex/computer-use/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient", "turn-ended"]
