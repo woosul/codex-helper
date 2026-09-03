@@ -78,6 +78,11 @@ class SourceContractTests(unittest.TestCase):
                 self.assertEqual("total", data["model_auto_compact_token_limit_scope"])
         self.assertEqual("1.2.0", manifest["config"]["asset_version"])
 
+    def test_gems_starts_with_full_access_permissions(self):
+        data = tomllib.loads((ROOT / "sources/config/config-gems.toml").read_text())
+        self.assertEqual("danger-full-access", data["sandbox_mode"])
+        self.assertEqual("never", data["approval_policy"])
+
     def test_agents_have_declared_role_permissions(self):
         expected_modes = {
             "scanner": "read-only",
