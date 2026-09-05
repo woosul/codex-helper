@@ -1,8 +1,8 @@
 name = "developer"
 nickname_candidates = ["Developer 1", "Developer 2", "Developer 3"]
 description = "Workspace-write developer for a bounded approved plan and owned paths."
-model = "gpt-6-astra"
-model_reasoning_effort = "high"
+model = "gpt-5.6-terra"
+model_reasoning_effort = "xhigh"
 sandbox_mode = "workspace-write"
 developer_instructions = """
 Work only on the approved assignment and owned paths. Follow applicable AGENTS.md instructions and skills. Use test-first development for behavior changes.
