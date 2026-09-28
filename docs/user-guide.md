@@ -1,7 +1,7 @@
 ---
 title: "Codex 하네스 사용자 가이드"
 description: "codex-helper 설치, 운용, 멀티에이전트 실행, 스킬 관리와 장애 대응 가이드"
-date: 2026-07-20
+date: 2026-09-24
 tags:
   - codex-helper
   - user-guide
@@ -11,7 +11,7 @@ tags:
 
 # 사용자 가이드
 
-이 저장소는 Codex 전역 지침, 호스트별 설정, read-only 에이전트, 스킬, 유틸리티의 원본을 Git으로 관리하고 각 런타임 위치에는 개별 심볼릭 링크만 배선한다. `~/.codex/config.toml`도 선택된 `sources/config/config-<host>.toml`을 가리키는 `global-config` 링크다.
+이 저장소는 Codex 전역 지침, 호스트별 설정, read-only 에이전트, 스킬, 유틸리티의 원본을 Git으로 관리한다. 대부분은 런타임 위치에 심볼릭 링크로 배선하지만 custom-agent TOML은 Codex 0.149+의 민감 파일 경계를 지키기 위해 regular file copy로 설치한다. `~/.codex/config.toml`도 선택된 `sources/config/config-<host>.toml`을 복구 원본으로 삼는 권한 `0600`의 regular file copy다.
 
 ## 처음 설치와 다른 머신 연결
 
@@ -89,7 +89,7 @@ flowchart LR
 
 ### 적용과 런타임 로드
 
-`codex-harness apply --yes`는 디스크의 설정과 링크를 갱신하지만 이미 열린 Codex 작업의 에이전트 레지스트리를 바꾸지는 않는다. 적용 후에는 새 Codex 작업을 시작한다. 새 작업에서도 이전 상태가 보이면 Orca/Codex 런타임을 재시작한 뒤 다시 확인한다.
+`codex-harness apply --yes`는 디스크의 설정 copy, 링크, agent regular-file copy를 갱신하지만 이미 열린 Codex 작업의 에이전트 레지스트리를 바꾸지는 않는다. 각 host config는 `[agents.<role>].config_file = "agents/<role>.toml"`로 역할을 명시 등록한다. 적용 후에는 새 Codex 작업을 시작한다. 새 작업에서도 이전 상태가 보이면 Orca/Codex 런타임을 재시작한 뒤 다시 확인한다.
 
 ```text
 scanner 커스텀 에이전트를 하나 실행해서 README의 첫 제목만 보고해줘.
@@ -186,7 +186,7 @@ codex-harness skill reset parallel-review
 
 `GEMS.local`은 `gems`로 정규화된다. 명시 옵션이나 환경 변수가 가리키는 파일이 없으면 오타로 보고 fail-closed하고, 자동 감지한 hostname만 미등록이면 plan에 fallback을 표시하며 default를 선택한다.
 
-전역 설정 대상은 런타임 `CODEX_HOME` 값과 무관하게 항상 `$HOME/.codex/config.toml`이다. 선택된 Git 원본으로 심볼릭 링크하며, 두 번째 적용은 no-op이다. 호스트 변경은 plan/status에서 drift로 나타난다.
+전역 설정 대상은 런타임 `CODEX_HOME` 값과 무관하게 항상 `$HOME/.codex/config.toml`이다. 선택된 Git 원본은 백업·복구 원본으로만 쓰고 live 설정은 regular file로 복사하며, 두 번째 적용은 no-op이다. state와 snapshot은 `CODEX_HOME`별로 분리되어 runtime 적용이 전역 하네스 상태를 덮지 않는다. 호스트 변경은 plan/status에서 drift로 나타난다.
 
 호스트별 config에는 머신 경로, MCP 정의, 플러그인 선택, 프로젝트 신뢰 설정과 UI 설정을 포함할 수 있다. 모든 v0.4.1 config에는 `features.multi_agent = true`, `agents.max_threads = 4`, `agents.max_depth = 1`이 필요하다.
 

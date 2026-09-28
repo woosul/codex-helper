@@ -14,9 +14,9 @@ default_source = "sources/config/config-default.toml"
 target = "$HOME/.codex/config.toml"
 asset_id = "global-config"
 asset_version = "1.2.0"
-state = "$HOME/.codex/.codex-helper/state.json"
+state = "${CODEX_HOME:-$HOME/.codex}/.codex-helper/state.json"
 preferences = "$HOME/.codex/.codex-helper/preferences.toml"
-backups = "$HOME/.codex/backups/codex-helper"
+backups = "${CODEX_HOME:-$HOME/.codex}/backups/codex-helper"
 
 [[assets]]
 id = "global-agents"
@@ -29,7 +29,7 @@ version = "1.0.3"
 
 [[assets]]
 id = "agent-scanner"
-kind = "symlink"
+kind = "copy"
 category = "agents"
 source = "sources/agents/scanner.toml"
 target = "${CODEX_HOME:-$HOME/.codex}/agents/scanner.toml"
@@ -38,7 +38,7 @@ version = "1.0.0"
 
 [[assets]]
 id = "agent-planner"
-kind = "symlink"
+kind = "copy"
 category = "agents"
 source = "sources/agents/planner.toml"
 target = "${CODEX_HOME:-$HOME/.codex}/agents/planner.toml"
@@ -47,7 +47,7 @@ version = "1.0.0"
 
 [[assets]]
 id = "agent-developer"
-kind = "symlink"
+kind = "copy"
 category = "agents"
 source = "sources/agents/developer.toml"
 target = "${CODEX_HOME:-$HOME/.codex}/agents/developer.toml"
@@ -56,7 +56,7 @@ version = "1.0.0"
 
 [[assets]]
 id = "agent-reviewer"
-kind = "symlink"
+kind = "copy"
 category = "agents"
 source = "sources/agents/reviewer.toml"
 target = "${CODEX_HOME:-$HOME/.codex}/agents/reviewer.toml"
@@ -65,7 +65,7 @@ version = "1.0.0"
 
 [[assets]]
 id = "agent-verifier"
-kind = "symlink"
+kind = "copy"
 category = "agents"
 source = "sources/agents/verifier.toml"
 target = "${CODEX_HOME:-$HOME/.codex}/agents/verifier.toml"

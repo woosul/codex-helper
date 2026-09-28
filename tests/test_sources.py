@@ -61,6 +61,12 @@ class SourceContractTests(unittest.TestCase):
             self.assertTrue(data["features"]["multi_agent"])
             self.assertEqual(4, data["agents"]["max_threads"])
             self.assertEqual(1, data["agents"]["max_depth"])
+            for role in ("scanner", "planner", "developer", "reviewer", "verifier"):
+                with self.subTest(config=path.name, role=role):
+                    self.assertEqual(
+                        f"agents/{role}.toml",
+                        data["agents"][role]["config_file"],
+                    )
 
     def test_gems_context_window_and_compaction_threshold(self):
         manifest = tomllib.loads((ROOT / "manifest.toml").read_text())
@@ -77,6 +83,10 @@ class SourceContractTests(unittest.TestCase):
                 )
                 self.assertEqual("total", data["model_auto_compact_token_limit_scope"])
         self.assertEqual("1.2.0", manifest["config"]["asset_version"])
+
+    def test_rock_backup_matches_selected_master_model(self):
+        data = tomllib.loads((ROOT / "sources/config/config-rock.toml").read_text())
+        self.assertEqual("gpt-6-sol", data["model"])
 
     def test_gems_starts_with_full_access_permissions(self):
         data = tomllib.loads((ROOT / "sources/config/config-gems.toml").read_text())
@@ -139,11 +149,11 @@ class SourceContractTests(unittest.TestCase):
 
     def test_agent_and_profile_model_assignments(self):
         expected_agents = {
-            "scanner": ("gpt-5.6-terra", "xhigh"),
-            "planner": ("gpt-5.6-sol", "high"),
-            "developer": ("gpt-5.6-terra", "xhigh"),
-            "reviewer": ("gpt-5.6-sol", "high"),
-            "verifier": ("gpt-5.6-terra", "xhigh"),
+            "scanner": ("gpt-6-sol", "high"),
+            "planner": ("gpt-6-sol", "xhigh"),
+            "developer": ("gpt-6-sol", "high"),
+            "reviewer": ("gpt-6-sol", "xhigh"),
+            "verifier": ("gpt-6-sol", "high"),
         }
         expected_profiles = {
             "deep-review.config": ("gpt-5.6-sol", "max"),
@@ -178,6 +188,14 @@ class SourceContractTests(unittest.TestCase):
         self.assertEqual("0.4.1", data["harness_version"])
         self.assertEqual("$HOME/.codex", data["paths"]["config_home"])
         self.assertEqual("$HOME/.codex/config.toml", data["config"]["target"])
+        self.assertEqual(
+            "${CODEX_HOME:-$HOME/.codex}/.codex-helper/state.json",
+            data["config"]["state"],
+        )
+        self.assertEqual(
+            "${CODEX_HOME:-$HOME/.codex}/backups/codex-helper",
+            data["config"]["backups"],
+        )
         self.assertIn("preferences", data["config"])
         self.assertEqual("sources/config/config-{host}.toml", data["config"]["source_pattern"])
         self.assertEqual("sources/config/config-default.toml", data["config"]["default_source"])
@@ -205,6 +223,7 @@ class SourceContractTests(unittest.TestCase):
         ):
             asset = assets[asset_id]
             self.assertEqual("agents", asset["category"])
+            self.assertEqual("copy", asset["kind"])
             self.assertEqual(source, asset["source"])
             self.assertEqual(target, asset["target"])
 

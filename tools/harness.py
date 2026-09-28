@@ -189,6 +189,10 @@ def load_context(
             raise ValueError(f"target outside approved roots: {target}")
         if item["id"] in ids or target in targets:
             raise ValueError("duplicate asset id or target")
+        if item["kind"] not in {"symlink", "copy", "utility"}:
+            raise ValueError(f"unsupported asset kind for {item['id']}: {item['kind']}")
+        if item["kind"] == "copy" and not source.is_file():
+            raise ValueError(f"copy source must be a file for {item['id']}")
         ids.add(item["id"])
         targets.add(target)
         enabled = item.get("enabled", True)
@@ -229,7 +233,7 @@ def load_context(
     assets.append(
         Asset(
             id=config_id,
-            kind="symlink",
+            kind="copy",
             category="config",
             source=selected_config,
             target=config_target,
@@ -245,13 +249,11 @@ def load_context(
     state_path = Path(expand_value(config["state"], env)).expanduser()
     preferences_path = Path(expand_value(config["preferences"], env)).expanduser()
     backups_dir = Path(expand_value(config["backups"], env)).expanduser()
-    for name, path in (
-        ("state", state_path),
-        ("preferences", preferences_path),
-        ("backups", backups_dir),
-    ):
-        if not is_lexically_within(path, config_home):
-            raise ValueError(f"{name} path outside global config home: {path}")
+    for name, path in (("state", state_path), ("backups", backups_dir)):
+        if not is_lexically_within(path, codex_home):
+            raise ValueError(f"{name} path outside Codex home: {path}")
+    if not is_lexically_within(preferences_path, config_home):
+        raise ValueError(f"preferences path outside global config home: {preferences_path}")
     return Context(
         root=root.resolve(),
         manifest_path=manifest_path.resolve(),
@@ -277,14 +279,18 @@ def inspect_asset(asset: Asset, enabled: bool = True) -> AssetStatus:
     if not asset.target.exists() and not asset.target.is_symlink():
         status, actual = ("missing" if enabled else "disabled"), None
     elif not enabled:
-        if _link_matches(asset.target, asset.source):
+        if _asset_matches(asset):
             status = "pending-disable"
             actual = str(asset.source.resolve(strict=False))
         else:
             status, actual = "conflict", None
-    elif not asset.target.is_symlink():
-        status, actual = "conflict", None
-    else:
+    elif asset.kind == "copy":
+        if _copy_matches(asset.target, asset.source):
+            status, actual = "current", str(asset.target)
+        else:
+            status = "drifted" if asset.category == "config" else "conflict"
+            actual = None
+    elif asset.target.is_symlink():
         actual_path = Path(os.readlink(asset.target))
         if not actual_path.is_absolute():
             actual_path = asset.target.parent / actual_path
@@ -295,6 +301,8 @@ def inspect_asset(asset: Asset, enabled: bool = True) -> AssetStatus:
             status = "broken"
         else:
             status = "drifted"
+    else:
+        status, actual = "conflict", None
     return AssetStatus(
         asset.id,
         asset.category,
@@ -683,6 +691,14 @@ def atomic_symlink(source: Path, target: Path) -> None:
     os.replace(temporary, target)
 
 
+def atomic_copy(source: Path, target: Path, mode: int | None = None) -> None:
+    atomic_write(
+        target,
+        source.read_bytes(),
+        mode=source.stat().st_mode & 0o777 if mode is None else mode,
+    )
+
+
 def build_state(context: Context) -> dict[str, Any]:
     return {
         "schema_version": 1,
@@ -711,6 +727,27 @@ def _link_matches(target: Path, source: Path) -> bool:
     if not actual.is_absolute():
         actual = target.parent / actual
     return actual.resolve(strict=False) == source.resolve(strict=False)
+
+
+def _copy_matches(target: Path, source: Path) -> bool:
+    return (
+        target.is_file()
+        and not target.is_symlink()
+        and source.is_file()
+        and target.read_bytes() == source.read_bytes()
+    )
+
+
+def _asset_matches(asset: Asset) -> bool:
+    if asset.kind == "copy":
+        return _copy_matches(asset.target, asset.source)
+    return _link_matches(asset.target, asset.source)
+
+
+def _record_matches(target: Path, source: Path, kind: str) -> bool:
+    if kind == "copy":
+        return _copy_matches(target, source)
+    return _link_matches(target, source)
 
 
 def command_snapshot(context: Context) -> tuple[dict[str, Any], int]:
@@ -752,7 +789,7 @@ def command_apply(context: Context, yes: bool) -> tuple[dict[str, Any], int]:
         target, source = Path(record["target"]), Path(record["source"])
         if not target.exists() and not target.is_symlink():
             continue
-        if _link_matches(target, source):
+        if _record_matches(target, source, str(record.get("kind", "symlink"))):
             removable_stale.append((key, target))
         else:
             conflicts.append(key)
@@ -772,12 +809,14 @@ def command_apply(context: Context, yes: bool) -> tuple[dict[str, Any], int]:
         if status.status == "conflict" and not effective_enabled(asset, preferences)
     ]
     plan, _ = command_plan(context)
+    desired_state = build_state(context)
+    state_changed = previous_state != desired_state
     if protected_conflicts or ((conflicts or config_rewire_requires_review) and not yes):
         return {
             **plan,
             "conflicts": list(dict.fromkeys(conflicts + config_rewire_requires_review)),
         }, EXIT_CONFLICT
-    if not plan["changes"] and not removable_stale:
+    if not plan["changes"] and not removable_stale and not state_changed:
         return {**plan, "snapshot_id": None, "applied": False}, EXIT_OK
     receipt = create_snapshot(context, previous_state)
     fail_after = int(os.environ.get("CODEX_HELPER_FAIL_AFTER", "0"))
@@ -803,12 +842,18 @@ def command_apply(context: Context, yes: bool) -> tuple[dict[str, Any], int]:
                 continue
             if asset.target.exists() or asset.target.is_symlink():
                 _remove_existing(asset.target)
-            atomic_symlink(asset.source, asset.target)
+            if asset.kind == "copy":
+                atomic_copy(
+                    asset.source,
+                    asset.target,
+                    mode=0o600 if asset.category == "config" else None,
+                )
+            else:
+                atomic_symlink(asset.source, asset.target)
             mutated()
-        state = build_state(context)
         atomic_write(
             context.state_path,
-            (json.dumps(state, indent=2, sort_keys=True) + "\n").encode(),
+            (json.dumps(desired_state, indent=2, sort_keys=True) + "\n").encode(),
         )
         mutated()
     except Exception as error:
@@ -839,8 +884,8 @@ def command_unlink(context: Context, yes: bool) -> tuple[dict[str, Any], int]:
         target, source = Path(record["target"]), Path(record["source"])
         if not target.exists() and not target.is_symlink():
             continue
-        if _link_matches(target, source):
-            target.unlink()
+        if _record_matches(target, source, str(record.get("kind", "symlink"))):
+            _remove_existing(target)
         else:
             conflicts.append(key)
     live_path = selected_config.target
@@ -1292,18 +1337,19 @@ def command_doctor(context: Context) -> tuple[dict[str, Any], int]:
         recorded = state.get("assets", {}).get(selected_config.id, {})
         tomllib.loads(selected_config.source.read_text())
         config_ok = (
-            _link_matches(selected_config.target, selected_config.source)
+            _copy_matches(selected_config.target, selected_config.source)
             and recorded.get("source") == str(selected_config.source)
             and recorded.get("target") == str(selected_config.target)
+            and recorded.get("kind") == "copy"
         )
     except (OSError, ValueError, json.JSONDecodeError, tomllib.TOMLDecodeError):
         config_ok = False
     add(
         "config",
         config_ok,
-        "live config links to the selected host source and matches state"
+        "live config matches the selected host backup and recorded state"
         if config_ok
-        else "managed config link or selected host state drift detected",
+        else "managed config copy or selected host state drift detected",
     )
 
     flagged_sources = _secret_findings(context)

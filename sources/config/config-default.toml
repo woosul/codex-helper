@@ -10,3 +10,18 @@ js_repl = false
 [agents]
 max_threads = 4
 max_depth = 1
+
+[agents.scanner]
+config_file = "agents/scanner.toml"
+
+[agents.planner]
+config_file = "agents/planner.toml"
+
+[agents.developer]
+config_file = "agents/developer.toml"
+
+[agents.reviewer]
+config_file = "agents/reviewer.toml"
+
+[agents.verifier]
+config_file = "agents/verifier.toml"

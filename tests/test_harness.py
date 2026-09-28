@@ -41,7 +41,7 @@ class HarnessTests(unittest.TestCase):
         self.assertTrue(any(item["id"] == "global-agents" for item in payload["assets"]))
         config = next(item for item in payload["assets"] if item["id"] == "global-config")
         self.assertEqual("config", config["category"])
-        self.assertEqual("symlink", config["kind"])
+        self.assertEqual("copy", config["kind"])
         self.assertEqual(ROOT / "sources/config/config-default.toml", Path(config["source"]))
         self.assertFalse(self.codex_home.exists())
 
@@ -101,6 +101,52 @@ class HarnessTests(unittest.TestCase):
             {item["id"] for item in payload["assets"]},
         )
         self.assertTrue(all(item["category"] == "agents" for item in payload["assets"]))
+        self.assertTrue(all(item["kind"] == "copy" for item in payload["assets"]))
+
+    def test_apply_materializes_agent_roles_as_regular_files(self):
+        self.run_cli("apply", "--yes")
+        for role in ("scanner", "planner", "developer", "reviewer", "verifier"):
+            with self.subTest(role=role):
+                installed = self.codex_home / "agents" / f"{role}.toml"
+                source = ROOT / "sources" / "agents" / f"{role}.toml"
+                self.assertTrue(installed.is_file())
+                self.assertFalse(installed.is_symlink())
+                self.assertEqual(source.read_bytes(), installed.read_bytes())
+
+        status = self.run_cli("status", "--json")
+        agents = [
+            item
+            for item in json.loads(status.stdout)["assets"]
+            if item["category"] == "agents"
+        ]
+        self.assertTrue(all(item["status"] == "current" for item in agents))
+
+    def test_apply_materializes_global_config_as_private_regular_file(self):
+        self.run_cli("apply", "--yes")
+
+        installed = self.codex_home / "config.toml"
+        source = ROOT / "sources/config/config-default.toml"
+        self.assertTrue(installed.is_file())
+        self.assertFalse(installed.is_symlink())
+        self.assertEqual(source.read_bytes(), installed.read_bytes())
+        self.assertEqual(0o600, installed.stat().st_mode & 0o777)
+
+    def test_runtime_codex_home_keeps_state_and_backups_out_of_global_home(self):
+        runtime_home = self.home / "runtime-codex-home"
+        env = {**self.env, "CODEX_HOME": str(runtime_home)}
+        subprocess.run(
+            [str(CLI), "apply", "--yes"],
+            cwd=ROOT,
+            env=env,
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+
+        self.assertTrue((runtime_home / ".codex-helper/state.json").is_file())
+        self.assertTrue((runtime_home / "backups/codex-helper").is_dir())
+        self.assertFalse((self.codex_home / ".codex-helper/state.json").exists())
+        self.assertFalse((self.codex_home / "backups/codex-helper").exists())
 
     def test_status_reports_missing_without_mutating(self):
         result = self.run_cli("status", "--json", check=False)
@@ -339,21 +385,37 @@ class HarnessTests(unittest.TestCase):
         self.assertFalse((self.codex_home / ".codex-helper/preferences.toml").exists())
         self.assertTrue((self.home / ".agents/skills/parallel-review").is_symlink())
 
-    def test_apply_is_idempotent_and_links_selected_config(self):
+    def test_apply_is_idempotent_and_copies_selected_config(self):
         self.codex_home.mkdir(parents=True)
         live = self.codex_home / "config.toml"
         external = self.home / ".agents/skills/external"
         external.mkdir(parents=True)
         (external / "SKILL.md").write_text("external")
         self.run_cli("apply", "--yes")
-        self.assertTrue(live.is_symlink())
-        self.assertEqual(ROOT / "sources/config/config-default.toml", live.resolve())
+        self.assertTrue(live.is_file())
+        self.assertFalse(live.is_symlink())
+        self.assertEqual(
+            (ROOT / "sources/config/config-default.toml").read_bytes(),
+            live.read_bytes(),
+        )
         self.run_cli("apply", "--yes")
-        self.assertTrue(live.is_symlink())
+        self.assertFalse(live.is_symlink())
         self.assertTrue((external / "SKILL.md").exists())
         self.assertEqual((ROOT / "AGENTS.md").resolve(), (self.codex_home / "AGENTS.md").resolve())
         plan = json.loads(self.run_cli("plan", "--json").stdout)
         self.assertFalse(plan["changes"])
+
+    def test_apply_rebuilds_missing_state_when_assets_are_current(self):
+        self.run_cli("apply", "--yes")
+        state = self.codex_home / ".codex-helper/state.json"
+        state.unlink()
+
+        applied = json.loads(self.run_cli("apply", "--yes").stdout)
+
+        self.assertTrue(applied["applied"])
+        self.assertTrue(state.is_file())
+        recorded = json.loads(state.read_text())
+        self.assertEqual("copy", recorded["assets"]["global-config"]["kind"])
 
     def test_first_apply_over_real_config_requires_yes_and_snapshots_it(self):
         self.codex_home.mkdir(parents=True)
@@ -368,7 +430,12 @@ class HarnessTests(unittest.TestCase):
 
         applied = json.loads(self.run_cli("apply", "--yes").stdout)
         self.assertTrue(applied["snapshot_id"])
-        self.assertTrue(live.is_symlink())
+        self.assertFalse(live.is_symlink())
+        self.assertEqual(
+            (ROOT / "sources/config/config-default.toml").read_bytes(),
+            live.read_bytes(),
+        )
+        self.assertEqual(0o600, live.stat().st_mode & 0o777)
 
         self.run_cli("restore", applied["snapshot_id"], "--yes")
         self.assertFalse(live.is_symlink())
@@ -377,7 +444,7 @@ class HarnessTests(unittest.TestCase):
 
     def test_host_switch_is_reported_as_drift_and_updates_state(self):
         self.run_cli("--host", "gems", "apply", "--yes")
-        gems_link = os.readlink(self.codex_home / "config.toml")
+        gems_config = (self.codex_home / "config.toml").read_bytes()
         gems_state = (self.codex_home / ".codex-helper/state.json").read_bytes()
         status = self.run_cli("--host", "rock", "status", "--json", check=False)
         self.assertEqual(1, status.returncode)
@@ -389,7 +456,7 @@ class HarnessTests(unittest.TestCase):
 
         rejected = self.run_cli("--host", "rock", "apply", check=False)
         self.assertEqual(3, rejected.returncode)
-        self.assertEqual(gems_link, os.readlink(self.codex_home / "config.toml"))
+        self.assertEqual(gems_config, (self.codex_home / "config.toml").read_bytes())
         self.assertEqual(
             gems_state,
             (self.codex_home / ".codex-helper/state.json").read_bytes(),
@@ -397,8 +464,8 @@ class HarnessTests(unittest.TestCase):
 
         self.run_cli("--host", "rock", "apply", "--yes")
         self.assertEqual(
-            ROOT / "sources/config/config-rock.toml",
-            (self.codex_home / "config.toml").resolve(),
+            (ROOT / "sources/config/config-rock.toml").read_bytes(),
+            (self.codex_home / "config.toml").read_bytes(),
         )
         state = json.loads((self.codex_home / ".codex-helper/state.json").read_text())
         self.assertTrue(state["assets"]["global-config"]["source"].endswith("config-rock.toml"))
