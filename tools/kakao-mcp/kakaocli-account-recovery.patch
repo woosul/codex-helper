@@ -1,0 +1,230 @@
+diff --git a/Sources/KakaoCore/Database/DeviceInfo.swift b/Sources/KakaoCore/Database/DeviceInfo.swift
+index 7874fa8..a3f06be 100644
+--- a/Sources/KakaoCore/Database/DeviceInfo.swift
++++ b/Sources/KakaoCore/Database/DeviceInfo.swift
+@@ -1,4 +1,5 @@
+ import CommonCrypto
++import Darwin
+ import Foundation
+
+ /// Extracts device UUID and KakaoTalk user ID from the local system.
+@@ -89,7 +90,11 @@ public enum DeviceInfo {
+             // "DESIGNATEDFRIENDSREVISION:<sha512hex>". The active account has non-zero values.
+             // We brute-force the pre-image since userIds are typically small integers.
+             if let hash = activeAccountHash(from: plist) {
+-                if let id = recoverUserIdFromSHA512(hexHash: hash) {
++                let cacheURL = FileManager.default.homeDirectoryForCurrentUser
++                    .appendingPathComponent(".cache/kakaocli/account.json")
++                if let id = resolveAccountUserId(hash: hash, cacheURL: cacheURL, recover: {
++                    recoverUserIdFromSHA512(hexHash: $0)
++                }) {
+                     return id
+                 }
+             }
+@@ -191,6 +196,44 @@ public enum DeviceInfo {
+         return nil
+     }
+
++    private struct AccountCache: Codable {
++        let accountHash: String
++        let userId: Int
++    }
++
++    private static func matchesAccount(_ id: Int, hash: String) -> Bool {
++        guard id >= 0 else { return false }
++        let bytes = Array(String(id).utf8)
++        var digest = [UInt8](repeating: 0, count: 64)
++        CC_SHA512(bytes, CC_LONG(bytes.count), &digest)
++        return digest.map { String(format: "%02x", $0) }.joined() == hash
++    }
++
++    // Cache identity only, never the database key. Revalidate against the live
++    // account hash so switching accounts cannot silently reuse an old identity.
++    static func resolveAccountUserId(
++        hash: String, cacheURL: URL, recover: (String) -> Int?
++    ) -> Int? {
++        if let data = try? Data(contentsOf: cacheURL),
++           let cached = try? JSONDecoder().decode(AccountCache.self, from: data),
++           cached.accountHash == hash, matchesAccount(cached.userId, hash: hash) {
++            return cached.userId
++        }
++        guard let id = recover(hash), matchesAccount(id, hash: hash) else { return nil }
++        do {
++            try FileManager.default.createDirectory(
++                at: cacheURL.deletingLastPathComponent(), withIntermediateDirectories: true,
++                attributes: [.posixPermissions: 0o700]
++            )
++            let data = try JSONEncoder().encode(AccountCache(accountHash: hash, userId: id))
++            try data.write(to: cacheURL, options: .atomic)
++            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: cacheURL.path)
++        } catch {
++            // An unavailable cache must not prevent a verified identity being used.
++        }
++        return id
++    }
++
+     /// Thread-safe holder for the parallel SHA-512 brute-force result.
+     /// @unchecked Sendable: all mutable access is guarded by `lock`.
+     private final class BruteForceResult: @unchecked Sendable {
+@@ -208,8 +251,11 @@ public enum DeviceInfo {
+     /// numbers are 8-10 digit integers (hundreds of millions), so the original
+     /// single-threaded 0..1e9 / 10s scan timed out before reaching them (issue #4).
+     /// This version shards the range across all cores and raises the ceiling.
+-    public static func recoverUserIdFromSHA512(hexHash: String) -> Int? {
+-        guard hexHash.count == 128 else { return nil }
++    public static func recoverUserIdFromSHA512(
++        hexHash: String, maxId: Int = 5_000_000_000,
++        timeoutSeconds: Double = 120, workerCount: Int? = nil
++    ) -> Int? {
++        guard hexHash.count == 128, maxId > 0, timeoutSeconds > 0 else { return nil }
+         // Parse target hash to bytes
+         var targetBytes = [UInt8](repeating: 0, count: 64)
+         let hexChars = Array(hexHash)
+@@ -220,36 +266,52 @@ public enum DeviceInfo {
+         let target = targetBytes
+
+         let startTime = CFAbsoluteTimeGetCurrent()
+-        // Kakao account numbers currently top out around 5e9; cap generously.
+-        let maxId = 5_000_000_000
+-        let timeoutSeconds = 120.0
+-        let workers = max(2, ProcessInfo.processInfo.activeProcessorCount)
++        let workers = min(maxId, max(1, workerCount ?? ProcessInfo.processInfo.activeProcessorCount))
+         let chunk = (maxId + workers - 1) / workers
+         let result = BruteForceResult()
+
+         DispatchQueue.concurrentPerform(iterations: workers) { w in
+             let lo = w * chunk
+             let hi = min(lo + chunk, maxId)
+-            var hash = [UInt8](repeating: 0, count: Int(CC_SHA512_DIGEST_LENGTH))
+-            var i = lo
+-            while i < hi {
+-                let s = String(i)
+-                let data = Array(s.utf8)
+-                CC_SHA512(data, CC_LONG(data.count), &hash)
+-                if hash == target {
+-                    result.record(i)
+-                    return
+-                }
+-                // Check the shared stop flag and the deadline only every 64K
+-                // hashes: taking the lock on every iteration serialises workers.
+-                if i & 0xFFFF == 0 {
+-                    if result.stopped { return }
+-                    if CFAbsoluteTimeGetCurrent() - startTime > timeoutSeconds {
+-                        result.stop()
+-                        return
++            guard lo < hi else { return }
++            var decimal = [UInt8](repeating: 48, count: 20)
++            let initial = Array(String(lo).utf8)
++            var offset = decimal.count - initial.count
++            decimal.replaceSubrange(offset..<decimal.count, with: initial)
++            var digest = [UInt8](repeating: 0, count: 64)
++            target.withUnsafeBufferPointer { expected in
++                decimal.withUnsafeMutableBufferPointer { digits in
++                    digest.withUnsafeMutableBufferPointer { hash in
++                        var i = lo
++                        while i < hi {
++                            if i & 0xFFF == 0 {
++                                if result.stopped { return }
++                                if CFAbsoluteTimeGetCurrent() - startTime >= timeoutSeconds {
++                                    result.stop()
++                                    return
++                                }
++                            }
++                            CC_SHA512(digits.baseAddress! + offset, CC_LONG(20 - offset), hash.baseAddress!)
++                            if memcmp(hash.baseAddress!, expected.baseAddress!, 64) == 0 {
++                                result.record(i)
++                                return
++                            }
++                            // Increment ASCII in place: no String/Array allocation per candidate.
++                            var position = 19
++                            while position >= offset && digits[position] == 57 {
++                                digits[position] = 48
++                                position -= 1
++                            }
++                            if position < offset {
++                                offset -= 1
++                                digits[offset] = 49
++                            } else {
++                                digits[position] += 1
++                            }
++                            i += 1
++                        }
+                     }
+                 }
+-                i += 1
+             }
+         }
+         return result.value
+diff --git a/Tests/KakaoCoreTests/AccountRecoveryTests.swift b/Tests/KakaoCoreTests/AccountRecoveryTests.swift
+new file mode 100644
+index 0000000..d0cba97
+--- /dev/null
++++ b/Tests/KakaoCoreTests/AccountRecoveryTests.swift
+@@ -0,0 +1,67 @@
++import CommonCrypto
++import Foundation
++import Testing
++@testable import KakaoCore
++
++private func accountHash(_ id: Int) -> String {
++    let bytes = Array(String(id).utf8)
++    var hash = [UInt8](repeating: 0, count: 64)
++    CC_SHA512(bytes, CC_LONG(bytes.count), &hash)
++    return hash.map { String(format: "%02x", $0) }.joined()
++}
++
++@Test func recoveryHandlesDecimalCarriesAndWorkerBoundaries() {
++    for id in [0, 9, 10, 99, 100, 332, 333, 334, 999] {
++        #expect(DeviceInfo.recoverUserIdFromSHA512(
++            hexHash: accountHash(id), maxId: 1000, timeoutSeconds: 2, workerCount: 3
++        ) == id)
++    }
++    #expect(DeviceInfo.recoverUserIdFromSHA512(
++        hexHash: accountHash(1000), maxId: 1000, timeoutSeconds: 2, workerCount: 3
++    ) == nil)
++}
++
++@Test func recoveryRejectsMalformedHashAndHonorsDeadline() {
++    #expect(DeviceInfo.recoverUserIdFromSHA512(hexHash: String(repeating: "z", count: 128)) == nil)
++    #expect(DeviceInfo.recoverUserIdFromSHA512(
++        hexHash: accountHash(999_999), maxId: 1_000_000, timeoutSeconds: 0, workerCount: 1
++    ) == nil)
++}
++
++@Test func accountCacheSkipsSearchAndInvalidatesOnAccountSwitch() throws {
++    let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
++    defer { try? FileManager.default.removeItem(at: dir) }
++    let file = dir.appendingPathComponent("account.json")
++    var searches = 0
++    let first = DeviceInfo.resolveAccountUserId(hash: accountHash(123), cacheURL: file) { _ in
++        searches += 1
++        return 123
++    }
++    #expect(first == 123)
++    #expect(searches == 1)
++    #expect(DeviceInfo.resolveAccountUserId(hash: accountHash(123), cacheURL: file) { _ in
++        searches += 1
++        return nil
++    } == 123)
++    #expect(searches == 1)
++    #expect(DeviceInfo.resolveAccountUserId(hash: accountHash(456), cacheURL: file) { _ in
++        searches += 1
++        return 456
++    } == 456)
++    #expect(searches == 2)
++    let permissions = try FileManager.default.attributesOfItem(atPath: file.path)[.posixPermissions] as? NSNumber
++    #expect(permissions?.intValue == 0o600)
++    let cache = try JSONSerialization.jsonObject(with: Data(contentsOf: file)) as? [String: Any]
++    #expect(Set(cache?.keys.map { $0 } ?? []) == Set(["accountHash", "userId"]))
++}
++
++@Test func accountCacheDoesNotTrustMismatchedOrCorruptValues() throws {
++    let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
++    defer { try? FileManager.default.removeItem(at: dir) }
++    try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
++    let file = dir.appendingPathComponent("account.json")
++    try JSONSerialization.data(withJSONObject: ["accountHash": accountHash(123), "userId": 456]).write(to: file)
++    #expect(DeviceInfo.resolveAccountUserId(hash: accountHash(123), cacheURL: file) { _ in 123 } == 123)
++    try Data("invalid".utf8).write(to: file)
++    #expect(DeviceInfo.resolveAccountUserId(hash: accountHash(123), cacheURL: file) { _ in 456 } == nil)
++}
