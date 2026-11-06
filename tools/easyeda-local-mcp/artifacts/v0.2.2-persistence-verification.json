@@ -1,0 +1,208 @@
+{
+  "extensionVersion": "0.2.2",
+  "appVersion": "3.2.149.88089769",
+  "apiVersion": "0.2.53",
+  "method": "text create + generic sch_PrimitiveObject.delete",
+  "modifyIsReplacement": true,
+  "inPlaceModifyVerified": false,
+  "reload": "sch_Document.save, dmt_EditorControl.closeDocument, openDocument, activateDocument, fresh getAll",
+  "finalMarkerCount": 0,
+  "runs": [
+    {
+      "file": "project1-add_marker-1791128177105.json",
+      "checkedAt": "2026-10-04T15:36:17.104Z",
+      "toolCount": 2,
+      "extraArgumentsRejected": true,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"scope\":\"d14fefa10b1123adbe62ff004541b73209ba2b5e80ca2f0ddec7c91dfdd8dd5a\",\"document\":\"96a9421bbf9318e7\",\"action\":\"add_marker\",\"ok\":true,\"markers\":[{\"id\":\"603337e32558408b\",\"content\":\"CODEX CONTROL TEST\",\"x\":300,\"y\":300}]}"
+          }
+        ],
+        "structuredContent": {
+          "scope": "d14fefa10b1123adbe62ff004541b73209ba2b5e80ca2f0ddec7c91dfdd8dd5a",
+          "document": "96a9421bbf9318e7",
+          "action": "add_marker",
+          "ok": true,
+          "markers": [
+            {
+              "id": "603337e32558408b",
+              "content": "CODEX CONTROL TEST",
+              "x": 300,
+              "y": 300
+            }
+          ]
+        }
+      }
+    },
+    {
+      "file": "project1-delete_marker-1791128241504.json",
+      "checkedAt": "2026-10-04T15:37:21.503Z",
+      "toolCount": 2,
+      "extraArgumentsRejected": true,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"scope\":\"d14fefa10b1123adbe62ff004541b73209ba2b5e80ca2f0ddec7c91dfdd8dd5a\",\"document\":\"96a9421bbf9318e7\",\"action\":\"delete_marker\",\"ok\":true,\"markers\":[]}"
+          }
+        ],
+        "structuredContent": {
+          "scope": "d14fefa10b1123adbe62ff004541b73209ba2b5e80ca2f0ddec7c91dfdd8dd5a",
+          "document": "96a9421bbf9318e7",
+          "action": "delete_marker",
+          "ok": true,
+          "markers": []
+        }
+      }
+    },
+    {
+      "file": "project1-modify_marker-1791128199058.json",
+      "checkedAt": "2026-10-04T15:36:39.057Z",
+      "toolCount": 2,
+      "extraArgumentsRejected": true,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"scope\":\"d14fefa10b1123adbe62ff004541b73209ba2b5e80ca2f0ddec7c91dfdd8dd5a\",\"document\":\"96a9421bbf9318e7\",\"action\":\"modify_marker\",\"ok\":true,\"markers\":[{\"id\":\"7799e5976de37c64\",\"content\":\"CODEX CONTROL TEST - saved\",\"x\":350,\"y\":300}]}"
+          }
+        ],
+        "structuredContent": {
+          "scope": "d14fefa10b1123adbe62ff004541b73209ba2b5e80ca2f0ddec7c91dfdd8dd5a",
+          "document": "96a9421bbf9318e7",
+          "action": "modify_marker",
+          "ok": true,
+          "markers": [
+            {
+              "id": "7799e5976de37c64",
+              "content": "CODEX CONTROL TEST - saved",
+              "x": 350,
+              "y": 300
+            }
+          ]
+        }
+      }
+    },
+    {
+      "file": "project1-read-1791128165725.json",
+      "checkedAt": "2026-10-04T15:36:05.725Z",
+      "toolCount": 2,
+      "extraArgumentsRejected": true,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"scope\":\"d14fefa10b1123adbe62ff004541b73209ba2b5e80ca2f0ddec7c91dfdd8dd5a\",\"document\":\"96a9421bbf9318e7\",\"action\":\"read\",\"ok\":true,\"markers\":[]}"
+          }
+        ],
+        "structuredContent": {
+          "scope": "d14fefa10b1123adbe62ff004541b73209ba2b5e80ca2f0ddec7c91dfdd8dd5a",
+          "document": "96a9421bbf9318e7",
+          "action": "read",
+          "ok": true,
+          "markers": []
+        }
+      }
+    },
+    {
+      "file": "project1-read-1791128268130.json",
+      "checkedAt": "2026-10-04T15:37:48.129Z",
+      "toolCount": 2,
+      "extraArgumentsRejected": true,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"scope\":\"d14fefa10b1123adbe62ff004541b73209ba2b5e80ca2f0ddec7c91dfdd8dd5a\",\"document\":\"96a9421bbf9318e7\",\"action\":\"read\",\"ok\":true,\"markers\":[]}"
+          }
+        ],
+        "structuredContent": {
+          "scope": "d14fefa10b1123adbe62ff004541b73209ba2b5e80ca2f0ddec7c91dfdd8dd5a",
+          "document": "96a9421bbf9318e7",
+          "action": "read",
+          "ok": true,
+          "markers": []
+        }
+      }
+    },
+    {
+      "file": "project1-reopen-1791128187270.json",
+      "checkedAt": "2026-10-04T15:36:27.269Z",
+      "toolCount": 2,
+      "extraArgumentsRejected": true,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"scope\":\"d14fefa10b1123adbe62ff004541b73209ba2b5e80ca2f0ddec7c91dfdd8dd5a\",\"document\":\"96a9421bbf9318e7\",\"action\":\"reopen\",\"ok\":true,\"markers\":[{\"id\":\"603337e32558408b\",\"content\":\"CODEX CONTROL TEST\",\"x\":300,\"y\":300}]}"
+          }
+        ],
+        "structuredContent": {
+          "scope": "d14fefa10b1123adbe62ff004541b73209ba2b5e80ca2f0ddec7c91dfdd8dd5a",
+          "document": "96a9421bbf9318e7",
+          "action": "reopen",
+          "ok": true,
+          "markers": [
+            {
+              "id": "603337e32558408b",
+              "content": "CODEX CONTROL TEST",
+              "x": 300,
+              "y": 300
+            }
+          ]
+        }
+      }
+    },
+    {
+      "file": "project1-reopen-1791128211192.json",
+      "checkedAt": "2026-10-04T15:36:51.190Z",
+      "toolCount": 2,
+      "extraArgumentsRejected": true,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"scope\":\"d14fefa10b1123adbe62ff004541b73209ba2b5e80ca2f0ddec7c91dfdd8dd5a\",\"document\":\"96a9421bbf9318e7\",\"action\":\"reopen\",\"ok\":true,\"markers\":[{\"id\":\"7799e5976de37c64\",\"content\":\"CODEX CONTROL TEST - saved\",\"x\":350,\"y\":300}]}"
+          }
+        ],
+        "structuredContent": {
+          "scope": "d14fefa10b1123adbe62ff004541b73209ba2b5e80ca2f0ddec7c91dfdd8dd5a",
+          "document": "96a9421bbf9318e7",
+          "action": "reopen",
+          "ok": true,
+          "markers": [
+            {
+              "id": "7799e5976de37c64",
+              "content": "CODEX CONTROL TEST - saved",
+              "x": 350,
+              "y": 300
+            }
+          ]
+        }
+      }
+    },
+    {
+      "file": "project1-reopen-1791128254565.json",
+      "checkedAt": "2026-10-04T15:37:34.564Z",
+      "toolCount": 2,
+      "extraArgumentsRejected": true,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"scope\":\"d14fefa10b1123adbe62ff004541b73209ba2b5e80ca2f0ddec7c91dfdd8dd5a\",\"document\":\"96a9421bbf9318e7\",\"action\":\"reopen\",\"ok\":true,\"markers\":[]}"
+          }
+        ],
+        "structuredContent": {
+          "scope": "d14fefa10b1123adbe62ff004541b73209ba2b5e80ca2f0ddec7c91dfdd8dd5a",
+          "document": "96a9421bbf9318e7",
+          "action": "reopen",
+          "ok": true,
+          "markers": []
+        }
+      }
+    }
+  ]
+}

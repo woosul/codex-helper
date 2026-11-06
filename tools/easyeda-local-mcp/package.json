@@ -1,0 +1,12 @@
+{
+  "name": "easyeda-local-environment-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {"build": "node build.mjs", "bridge": "node bridge-daemon.mjs", "probe": "node probe.mjs"},
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.0",
+    "ws": "8.22.0"
+  },
+  "devDependencies": {"esbuild": "0.24.2", "jszip": "3.10.1"}
+}

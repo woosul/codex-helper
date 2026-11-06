@@ -1,0 +1,7 @@
+node_modules/
+.runtime/
+/archive/
+/extension/dist/
+/extension/extension.json
+/artifacts/*
+!/artifacts/v0.2.2-persistence-verification.json

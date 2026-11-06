@@ -1,3 +1,10 @@
+---
+title: Cross-machine bootstrap
+description: Restore the Codex harness and reusable tool sources while preserving host-specific runtime state.
+date: 2026-11-06
+tags: [codex, bootstrap, cross-machine]
+---
+
 # Cross-machine bootstrap
 
 ## New machine
@@ -60,6 +67,45 @@ Before upgrading a v0.3 machine, inspect its ignored `sources/config/hosts/<name
 Changing hosts is visible drift: run `codex-harness --host NEW plan --json`, review the new source, then run `codex-harness --host NEW apply --yes`. Applying a drifted, broken, or conflicting config link without `--yes` preserves the existing link and state. Do not manually repoint the link because state must record the same source for safe unlink and doctor checks.
 
 ## Updates and rollback
+
+### KiCad and EasyEDA tools
+
+Git carries the Konnect host configuration, EasyEDA bridge and MCP sources,
+package lockfiles, installed EasyEDA Agent skill sources, and selected verification
+evidence. It does not carry `node_modules`, runtime sockets/tokens/logs, archived
+workspace copies, or generated extension packages.
+
+From the repository root, restore dependencies and build the local extension:
+
+```sh
+npm ci --ignore-scripts --prefix tools/easyeda-local-mcp
+npm run build --prefix tools/easyeda-local-mcp
+python3 tools/easyeda-agent-trial/install-runtime.py
+npm ci --ignore-scripts --prefix tools/easyeda-agent-trial/mcp
+npm ci --ignore-scripts --prefix tools/easyeda-mcp-pro-trial
+```
+
+The pinned Agent installer selects a release asset for the host OS/architecture
+and verifies its SHA-256 using `release-v0.21.7.json`. An existing mismatched file
+is preserved and reported. Restore the skill link only if that machine needs it
+and the target path is free:
+
+```sh
+ln -s "$PWD/tools/easyeda-agent-trial/skills/easyeda-agent" "$HOME/.codex/skills/easyeda-agent"
+```
+
+`sources/config/konnect-rock.toml` is ROCK's non-secret Konnect configuration.
+Keep its server registration and configuration together. Other hosts must use
+their installed KiCad/Konnect executable and local database paths; do not copy
+ROCK's config over another host's active configuration. Database contents, pairing
+codes, and existing runtime configuration remain local.
+
+The local bridge's Project1 controls intentionally target a fixed disposable
+project/page. Restoring the source does not authorize creating or editing an
+arbitrary project on another machine. Importing extensions, granting permissions,
+and starting daemons remain separate operational steps.
+
+### Harness rollback
 
 Use the safe update sequence in `docs/operations.md`. Each apply creates a receipt automatically. If a new revision behaves incorrectly, restore the reported snapshot ID:
 

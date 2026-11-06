@@ -12,17 +12,16 @@ approval_policy = "never"
 
 [features]
 multi_agent = true
-rmcp_client = true
 memories = true
 js_repl = false
 
 [mcp_servers.n8n-mcp-local]
 command = "/Users/denny/Project/codex-helper/bin/codex-mcp-env"
-args = ["rock", "N8N_MCP_LOCAL_HEADER", "/Users/denny/.npm/_npx/85d60ba1adc82a16/node_modules/.bin/supergateway", "--streamableHttp", "https://mcp-local.peaknine.io/mcp", "--header"]
+args = ["rock", "N8N_MCP_LOCAL_HEADER", "/Users/denny/.local/share/codex-mcp/supergateway/node_modules/.bin/supergateway", "--streamableHttp", "https://mcp-local.peaknine.io/mcp", "--header"]
 
 [mcp_servers.n8n-mcp]
 command = "/Users/denny/Project/codex-helper/bin/codex-mcp-env"
-args = ["rock", "N8N_MCP_HEADER", "/Users/denny/.npm/_npx/85d60ba1adc82a16/node_modules/.bin/supergateway", "--streamableHttp", "https://play.peaknine.io/mcp-server/http", "--header"]
+args = ["rock", "N8N_MCP_HEADER", "/Users/denny/.local/share/codex-mcp/supergateway/node_modules/.bin/supergateway", "--streamableHttp", "https://play.peaknine.io/mcp-server/http", "--header"]
 
 [mcp_servers.obsidian-denny]
 command = "npx"
@@ -54,10 +53,10 @@ CODEX_CLI_PATH = "/Applications/ChatGPT.app/Contents/Resources/codex"
 url = "https://developers.openai.com/mcp"
 
 [mcp_servers.computer-use]
-command = "./Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient"
+command = "/Users/denny/.codex/computer-use/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient"
 args = ["mcp"]
-cwd = "."
-enabled = false
+cwd = "/Users/denny/.codex/computer-use"
+enabled = true
 
 [mcp_servers.chrome-devtools]
 command = "/Users/denny/.npm/_npx/15c61037b1978c83/node_modules/.bin/chrome-devtools-mcp"
@@ -220,6 +219,17 @@ trust_level = "trusted"
 
 [projects."/Users/denny/Documents/Blog"]
 trust_level = "trusted"
+
+[mcp_servers.easyeda_local_environment]
+command = "/Users/denny/.nvm/versions/node/v22.23.1/bin/node"
+args = ["/Users/denny/Project/codex-helper/tools/easyeda-local-mcp/mcp-server.mjs"]
+
+# Primary Konnect: KiCad PCM installation, full tool catalog.
+[mcp_servers.konnect]
+command = "/Users/denny/Documents/KiCad/10.0/3rdparty/plugins/com_github_mixelpixx_konnect/bin/konnect"
+args = ["--client", "codex", "--config", "/Users/denny/Project/codex-helper/sources/config/konnect-rock.toml"]
+startup_timeout_sec = 30
+tool_timeout_sec = 120
 
 [mcp_servers.kakao]
 command = "/Users/denny/.local/share/kakao-mcp/server/.venv/bin/kakao-mcp"

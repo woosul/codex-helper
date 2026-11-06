@@ -1,0 +1,9 @@
+{
+  "name": "easyeda-mcp-pro-isolated-trial",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Isolated fixed-version evaluation; not an active global MCP registration",
+  "dependencies": {
+    "easyeda-mcp-pro": "1.1.0"
+  }
+}

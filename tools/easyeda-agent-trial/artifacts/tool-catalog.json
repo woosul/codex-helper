@@ -1,0 +1,574 @@
+{
+  "tools": [
+    {
+      "name": "easyeda_health",
+      "title": "EasyEDA connection health",
+      "description": "Check the local daemon and connected EasyEDA Pro windows.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "easyeda_actions",
+      "title": "Discover EasyEDA actions",
+      "description": "Search the 110 typed EasyEDA actions and inspect inputs, mutation flags, and confirmation requirements.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "domain": {
+            "type": "string",
+            "enum": [
+              "artifact",
+              "board",
+              "document",
+              "pcb",
+              "project",
+              "schematic",
+              "system"
+            ]
+          },
+          "search": {
+            "type": "string"
+          },
+          "mutates": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "easyeda_artifact",
+      "title": "EasyEDA artifact",
+      "description": "Run one typed artifact action through easyeda-agent. Use easyeda_actions for input guidance.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "schematic.export.netlist",
+              "schematic.export.image",
+              "schematic.export.bom"
+            ],
+            "description": "Exact typed action name."
+          },
+          "project": {
+            "type": "string",
+            "description": "EasyEDA project name or UUID. Required for normal project work."
+          },
+          "doc": {
+            "type": "string",
+            "description": "Target schematic page or PCB name/UUID. Required for mutations."
+          },
+          "window": {
+            "type": "string",
+            "description": "Explicit connector windowId; use only to resolve genuine multi-window ambiguity."
+          },
+          "payload": {
+            "type": "object",
+            "description": "Typed action payload. Use easyeda_actions to inspect the action inputs.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "easyeda_board",
+      "title": "EasyEDA board",
+      "description": "Run one typed board action through easyeda-agent. Use easyeda_actions for input guidance.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "board.list",
+              "board.current",
+              "board.create",
+              "board.new_pcb",
+              "board.rename",
+              "board.copy",
+              "board.delete"
+            ],
+            "description": "Exact typed action name."
+          },
+          "project": {
+            "type": "string",
+            "description": "EasyEDA project name or UUID. Required for normal project work."
+          },
+          "doc": {
+            "type": "string",
+            "description": "Target schematic page or PCB name/UUID. Required for mutations."
+          },
+          "window": {
+            "type": "string",
+            "description": "Explicit connector windowId; use only to resolve genuine multi-window ambiguity."
+          },
+          "payload": {
+            "type": "object",
+            "description": "Typed action payload. Use easyeda_actions to inspect the action inputs.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "easyeda_document",
+      "title": "EasyEDA document",
+      "description": "Run one typed document action through easyeda-agent. Use easyeda_actions for input guidance.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "document.current",
+              "document.open",
+              "view.fit",
+              "view.fit_selection",
+              "view.zoom",
+              "view.region"
+            ],
+            "description": "Exact typed action name."
+          },
+          "project": {
+            "type": "string",
+            "description": "EasyEDA project name or UUID. Required for normal project work."
+          },
+          "doc": {
+            "type": "string",
+            "description": "Target schematic page or PCB name/UUID. Required for mutations."
+          },
+          "window": {
+            "type": "string",
+            "description": "Explicit connector windowId; use only to resolve genuine multi-window ambiguity."
+          },
+          "payload": {
+            "type": "object",
+            "description": "Typed action payload. Use easyeda_actions to inspect the action inputs.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "easyeda_pcb",
+      "title": "EasyEDA pcb",
+      "description": "Run one typed pcb action through easyeda-agent. Use easyeda_actions for input guidance.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "pcb.documents.list",
+              "pcb.components.list",
+              "pcb.layers.list",
+              "pcb.layers.set_current",
+              "pcb.layers.visibility",
+              "pcb.view.side",
+              "pcb.stackup.set",
+              "pcb.silk.align",
+              "pcb.silk.list",
+              "pcb.silk.add",
+              "pcb.silk.set",
+              "pcb.silk.netnames",
+              "pcb.silk.label_pads",
+              "pcb.silk.import_svg",
+              "pcb.nets.list",
+              "pcb.report",
+              "pcb.board.info",
+              "pcb.component.attrs_backfill",
+              "pcb.import_changes",
+              "pcb.add_component",
+              "pcb.component.modify",
+              "pcb.component.delete",
+              "pcb.page.clear",
+              "pcb.align",
+              "pcb.distribute",
+              "pcb.grid_snap",
+              "pcb.components.move",
+              "pcb.components.arrange",
+              "pcb.drc.check",
+              "pcb.drc.rules",
+              "pcb.line.create",
+              "pcb.via.create",
+              "pcb.save",
+              "pcb.export.dsn",
+              "pcb.import_autoroute",
+              "pcb.snapshot",
+              "pcb.line.list",
+              "pcb.via.list",
+              "pcb.route.rip_up",
+              "pcb.track.lock",
+              "pcb.route.delete",
+              "pcb.route.via_hop",
+              "pcb.clear_routing",
+              "pcb.pour.create",
+              "pcb.pour.list",
+              "pcb.pour.delete",
+              "pcb.pour.rebuild",
+              "pcb.beautify",
+              "pcb.region.create",
+              "pcb.region.list",
+              "pcb.region.delete",
+              "pcb.fill.create",
+              "pcb.fill.list",
+              "pcb.fill.delete",
+              "pcb.outline.set",
+              "pcb.outline.get",
+              "pcb.outline.clear"
+            ],
+            "description": "Exact typed action name."
+          },
+          "project": {
+            "type": "string",
+            "description": "EasyEDA project name or UUID. Required for normal project work."
+          },
+          "doc": {
+            "type": "string",
+            "description": "Target schematic page or PCB name/UUID. Required for mutations."
+          },
+          "window": {
+            "type": "string",
+            "description": "Explicit connector windowId; use only to resolve genuine multi-window ambiguity."
+          },
+          "payload": {
+            "type": "object",
+            "description": "Typed action payload. Use easyeda_actions to inspect the action inputs.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "easyeda_project",
+      "title": "EasyEDA project",
+      "description": "Run one typed project action through easyeda-agent. Use easyeda_actions for input guidance.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "project.current"
+            ],
+            "description": "Exact typed action name."
+          },
+          "project": {
+            "type": "string",
+            "description": "EasyEDA project name or UUID. Required for normal project work."
+          },
+          "doc": {
+            "type": "string",
+            "description": "Target schematic page or PCB name/UUID. Required for mutations."
+          },
+          "window": {
+            "type": "string",
+            "description": "Explicit connector windowId; use only to resolve genuine multi-window ambiguity."
+          },
+          "payload": {
+            "type": "object",
+            "description": "Typed action payload. Use easyeda_actions to inspect the action inputs.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "easyeda_schematic",
+      "title": "EasyEDA schematic",
+      "description": "Run one typed schematic action through easyeda-agent. Use easyeda_actions for input guidance.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "schematic.pages.list",
+              "schematic.page.open",
+              "schematic.titleblock.get",
+              "schematic.titleblock.modify",
+              "schematic.page.create",
+              "schematic.page.rename",
+              "schematic.page.delete",
+              "schematic.page.clear",
+              "schematic.rename",
+              "schematic.components.list",
+              "schematic.component.place",
+              "schematic.component.modify",
+              "schematic.component.delete",
+              "schematic.primitives.delete",
+              "schematic.wire.create",
+              "schematic.group.move",
+              "schematic.netflag.create",
+              "schematic.pin.set_no_connect",
+              "schematic.component.resolve_lcsc",
+              "schematic.text.list",
+              "schematic.library.search",
+              "schematic.library.get_by_lcsc",
+              "schematic.rebind.footprint",
+              "schematic.rebind.symbol",
+              "schematic.component.replace",
+              "schematic.power.connect_pin",
+              "schematic.pin.disconnect",
+              "schematic.select",
+              "schematic.snapshot",
+              "schematic.drc.check",
+              "schematic.check",
+              "schematic.bridgeCheck",
+              "schematic.read",
+              "schematic.save"
+            ],
+            "description": "Exact typed action name."
+          },
+          "project": {
+            "type": "string",
+            "description": "EasyEDA project name or UUID. Required for normal project work."
+          },
+          "doc": {
+            "type": "string",
+            "description": "Target schematic page or PCB name/UUID. Required for mutations."
+          },
+          "window": {
+            "type": "string",
+            "description": "Explicit connector windowId; use only to resolve genuine multi-window ambiguity."
+          },
+          "payload": {
+            "type": "object",
+            "description": "Typed action payload. Use easyeda_actions to inspect the action inputs.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "easyeda_system",
+      "title": "EasyEDA system",
+      "description": "Run one typed system action through easyeda-agent. Use easyeda_actions for input guidance.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "system.health",
+              "system.notify"
+            ],
+            "description": "Exact typed action name."
+          },
+          "project": {
+            "type": "string",
+            "description": "EasyEDA project name or UUID. Required for normal project work."
+          },
+          "doc": {
+            "type": "string",
+            "description": "Target schematic page or PCB name/UUID. Required for mutations."
+          },
+          "window": {
+            "type": "string",
+            "description": "Explicit connector windowId; use only to resolve genuine multi-window ambiguity."
+          },
+          "payload": {
+            "type": "object",
+            "description": "Typed action payload. Use easyeda_actions to inspect the action inputs.",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "easyeda_blocks",
+      "title": "EasyEDA circuit blocks",
+      "description": "List, search, or show an embedded proven circuit block. Does not require a running daemon.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": [
+              "list",
+              "search",
+              "show"
+            ]
+          },
+          "query": {
+            "type": "string",
+            "description": "Required for search."
+          },
+          "id": {
+            "type": "string",
+            "description": "Required for show."
+          }
+        },
+        "required": [
+          "operation"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "easyeda_workflow",
+      "title": "EasyEDA guarded workflow",
+      "description": "Inspect or advance the persisted project design-flow state machine.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": [
+              "init",
+              "status",
+              "advance",
+              "confirm",
+              "reset"
+            ]
+          },
+          "project": {
+            "type": "string"
+          },
+          "doc": {
+            "type": "string"
+          },
+          "reconcile": {
+            "type": "boolean",
+            "description": "For status: reconcile persisted state with the live document."
+          },
+          "minScore": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "For advance: minimum routability score."
+          },
+          "maxCrossings": {
+            "type": "integer",
+            "minimum": -1,
+            "description": "For advance: maximum ratline crossings; -1 is unlimited."
+          },
+          "confirmation": {
+            "type": "string",
+            "enum": [
+              "layout",
+              "outline"
+            ],
+            "description": "Required for confirm."
+          },
+          "note": {
+            "type": "string",
+            "description": "Human review note recorded by confirm."
+          },
+          "resetAll": {
+            "type": "boolean",
+            "description": "For reset: clear every confirmation."
+          },
+          "resetFrom": {
+            "type": "string",
+            "description": "For reset: first stage to clear, inclusive."
+          }
+        },
+        "required": [
+          "operation",
+          "project"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false
+      }
+    }
+  ]
+}

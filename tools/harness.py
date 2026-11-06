@@ -1121,6 +1121,19 @@ _ASSIGNMENT = re.compile(
 
 def _operational_files(context: Context) -> tuple[Path, ...]:
     files = [context.root / "AGENTS.md", context.root / "manifest.toml"]
+    if (context.root / ".git").exists():
+        result = subprocess.run(
+            ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z", "--", "bin", "tools", "sources"],
+            cwd=context.root, text=True, capture_output=True, check=True,
+        )
+        files.extend(
+            context.root / name
+            for name in result.stdout.split("\0")
+            if name and (context.root / name).is_file()
+            and "__pycache__" not in Path(name).parts and Path(name).suffix != ".pyc"
+        )
+        return tuple(dict.fromkeys(files))
+    # Source exports without Git metadata retain the filesystem-only inspection.
     for relative in ("bin", "tools", "sources"):
         base = context.root / relative
         files.extend(

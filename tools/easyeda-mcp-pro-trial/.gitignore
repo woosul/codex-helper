@@ -1,0 +1,11 @@
+node_modules/
+.runtime/
+.npm-cache/
+/artifacts/*
+!/artifacts/project1-final-3d.jpg
+!/artifacts/project2-original-integrity-final.json
+!/artifacts/project2-imported-pcb-source.txt
+!/artifacts/project2-pcb-import.jpg
+!/artifacts/project2-3d-import.jpg
+/compat-conversion/**/*.zip
+/compat-conversion/**/*.kicad_prl

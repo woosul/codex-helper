@@ -1,0 +1,376 @@
+{
+  "checkedAt": "2026-10-04T17:29:44.520224+00:00",
+  "purpose": "EasyEDA numeric-net compatibility experiment, not a full format downgrade",
+  "sourceDirectory": "/Users/denny/Project/kicad/kicad-integration-test",
+  "outputDirectory": "/Users/denny/Project/codex-helper/tools/easyeda-mcp-pro-trial/compat-conversion/p2-numeric-nets-20261004",
+  "netMapping": {
+    "/GND": 1,
+    "/LED_A": 2,
+    "/SW_VBAT": 3,
+    "/VBAT": 4
+  },
+  "baseline": {
+    "topLevelNetTableEntries": 0,
+    "namedReferences": 18,
+    "numericLookupResolvableReferences": 0
+  },
+  "checks": {
+    "fullAstEqualAfterNetNormalization": true,
+    "sourceBytesRecoveredAfterUndoingNetEdits": true,
+    "versionUnchanged": true,
+    "generatorVersionUnchanged": true,
+    "layersUnchanged": true,
+    "footprintsUnchangedExceptNetSyntax": true,
+    "padNetMeaningsPreserved": true,
+    "segmentGeometryWidthsLayersPreserved": true,
+    "referenceCount": 18,
+    "padReferences": 10,
+    "segmentReferences": 8,
+    "footprints": 4,
+    "allNumericReferencesResolveToOriginalNames": true
+  },
+  "version": "20260206",
+  "generatorVersion": "10.0",
+  "thickness": "1.6",
+  "stackupPresent": false,
+  "pads": [
+    {
+      "reference": "J1",
+      "pad": "1",
+      "uuid": "\"5619ef41-c0ba-4273-bb26-22fc34f468bd\"",
+      "net": "/VBAT",
+      "numericId": 4,
+      "at": [
+        "0",
+        "0"
+      ]
+    },
+    {
+      "reference": "J1",
+      "pad": "2",
+      "uuid": "\"520c9fcd-7ef0-4b88-8790-03a1ee334578\"",
+      "net": "/GND",
+      "numericId": 1,
+      "at": [
+        "0",
+        "2.54"
+      ]
+    },
+    {
+      "reference": "SW1",
+      "pad": "1",
+      "uuid": "\"bab1bace-d371-4caf-ac80-f393c57830c0\"",
+      "net": "/VBAT",
+      "numericId": 4,
+      "at": [
+        "-3.15",
+        "-1.9"
+      ]
+    },
+    {
+      "reference": "SW1",
+      "pad": "1",
+      "uuid": "\"e8c1f416-a440-4080-bc9d-327aab2bd28e\"",
+      "net": "/VBAT",
+      "numericId": 4,
+      "at": [
+        "3.15",
+        "-1.9"
+      ]
+    },
+    {
+      "reference": "SW1",
+      "pad": "2",
+      "uuid": "\"6edc7958-78df-451e-98b5-ff678d07c01b\"",
+      "net": "/SW_VBAT",
+      "numericId": 3,
+      "at": [
+        "-3.15",
+        "1.9"
+      ]
+    },
+    {
+      "reference": "SW1",
+      "pad": "2",
+      "uuid": "\"572c66b2-0ffa-4d46-813b-eee2eea53096\"",
+      "net": "/SW_VBAT",
+      "numericId": 3,
+      "at": [
+        "3.15",
+        "1.9"
+      ]
+    },
+    {
+      "reference": "D1",
+      "pad": "1",
+      "uuid": "\"2e00a103-7fb7-4625-a522-a1f0cf4cc02c\"",
+      "net": "/GND",
+      "numericId": 1,
+      "at": [
+        "-0.9375",
+        "0"
+      ]
+    },
+    {
+      "reference": "D1",
+      "pad": "2",
+      "uuid": "\"391d0981-f50a-48bf-a76b-8a70e030bc18\"",
+      "net": "/LED_A",
+      "numericId": 2,
+      "at": [
+        "0.9375",
+        "0"
+      ]
+    },
+    {
+      "reference": "R1",
+      "pad": "1",
+      "uuid": "\"08e7e14c-7e8a-45b1-979a-fefc89184971\"",
+      "net": "/SW_VBAT",
+      "numericId": 3,
+      "at": [
+        "-0.9125",
+        "0"
+      ]
+    },
+    {
+      "reference": "R1",
+      "pad": "2",
+      "uuid": "\"b63cbe65-42ca-49a6-a5c1-98fc2b1143ff\"",
+      "net": "/LED_A",
+      "numericId": 2,
+      "at": [
+        "0.9125",
+        "0"
+      ]
+    }
+  ],
+  "segments": [
+    {
+      "net": "/VBAT",
+      "numericId": 4,
+      "start": [
+        "103",
+        "86.6"
+      ],
+      "end": [
+        "113.15",
+        "86.6"
+      ],
+      "width": [
+        "0.35"
+      ],
+      "layer": [
+        "\"F.Cu\""
+      ],
+      "uuid": [
+        "\"0fe46bbe-75d9-42b2-9d41-199be7653fe2\""
+      ]
+    },
+    {
+      "net": "/GND",
+      "numericId": 1,
+      "start": [
+        "103",
+        "94.5"
+      ],
+      "end": [
+        "103",
+        "89.14"
+      ],
+      "width": [
+        "0.35"
+      ],
+      "layer": [
+        "\"F.Cu\""
+      ],
+      "uuid": [
+        "\"6058ddf4-f71f-4cdb-97ee-6707f7d58a8e\""
+      ]
+    },
+    {
+      "net": "/GND",
+      "numericId": 1,
+      "start": [
+        "109.0625",
+        "94.5"
+      ],
+      "end": [
+        "103",
+        "94.5"
+      ],
+      "width": [
+        "0.35"
+      ],
+      "layer": [
+        "\"F.Cu\""
+      ],
+      "uuid": [
+        "\"69776b28-de87-42d7-8120-5719476b4116\""
+      ]
+    },
+    {
+      "net": "/SW_VBAT",
+      "numericId": 3,
+      "start": [
+        "113.15",
+        "90.4"
+      ],
+      "end": [
+        "116.5875",
+        "90.4"
+      ],
+      "width": [
+        "0.35"
+      ],
+      "layer": [
+        "\"F.Cu\""
+      ],
+      "uuid": [
+        "\"2d121cfb-a2bc-40ff-85f7-ddaca1d4aaff\""
+      ]
+    },
+    {
+      "net": "/SW_VBAT",
+      "numericId": 3,
+      "start": [
+        "106.85",
+        "90.4"
+      ],
+      "end": [
+        "113.15",
+        "90.4"
+      ],
+      "width": [
+        "0.35"
+      ],
+      "layer": [
+        "\"F.Cu\""
+      ],
+      "uuid": [
+        "\"ac04d4b7-af2c-4e17-921d-807d576310fb\""
+      ]
+    },
+    {
+      "net": "/LED_A",
+      "numericId": 2,
+      "start": [
+        "118.4125",
+        "90.4"
+      ],
+      "end": [
+        "118.5",
+        "90.4875"
+      ],
+      "width": [
+        "0.35"
+      ],
+      "layer": [
+        "\"F.Cu\""
+      ],
+      "uuid": [
+        "\"0aa6f66c-b1ba-4edc-8804-2cb871f92ce9\""
+      ]
+    },
+    {
+      "net": "/LED_A",
+      "numericId": 2,
+      "start": [
+        "118.5",
+        "94.5"
+      ],
+      "end": [
+        "110.9375",
+        "94.5"
+      ],
+      "width": [
+        "0.35"
+      ],
+      "layer": [
+        "\"F.Cu\""
+      ],
+      "uuid": [
+        "\"a931888c-3edf-4b23-a0c0-dae0cf6512de\""
+      ]
+    },
+    {
+      "net": "/LED_A",
+      "numericId": 2,
+      "start": [
+        "118.5",
+        "90.4875"
+      ],
+      "end": [
+        "118.5",
+        "94.5"
+      ],
+      "width": [
+        "0.35"
+      ],
+      "layer": [
+        "\"F.Cu\""
+      ],
+      "uuid": [
+        "\"fc3f3098-fb31-45ba-8852-3fae377f695a\""
+      ]
+    }
+  ],
+  "officialParserCheck": {
+    "cli": "/Applications/KiCad/KiCad.app/Contents/MacOS/kicad-cli",
+    "command": [
+      "/Applications/KiCad/KiCad.app/Contents/MacOS/kicad-cli",
+      "pcb",
+      "export",
+      "stats",
+      "--format",
+      "json",
+      "--output",
+      "/Users/denny/Project/codex-helper/tools/easyeda-mcp-pro-trial/compat-conversion/p2-numeric-nets-20261004/kicad-stats.json",
+      "/Users/denny/Project/codex-helper/tools/easyeda-mcp-pro-trial/compat-conversion/p2-numeric-nets-20261004/import-source/kicad-integration-test.kicad_pcb"
+    ],
+    "exitCode": 0,
+    "stdout": "Wrote board statistics to '/Users/denny/Project/codex-helper/tools/easyeda-mcp-pro-trial/compat-conversion/p2-numeric-nets-20261004/kicad-stats.json'.\n",
+    "stderr": "",
+    "passed": true,
+    "version": "10.0.6",
+    "statsAssertions": {
+      "components": 4,
+      "pads": 10,
+      "boardThickness": "1.6000 mm",
+      "minTrackWidth": "0.3500 mm",
+      "passed": true
+    },
+    "scope": "Copy-only statistics export; not DRC, EasyEDA import, or official semantic round-trip verification.",
+    "sidecar": "CLI generated import-source/kicad-integration-test.kicad_prl within the isolated directory; excluded from ZIP."
+  },
+  "sourceIntegrity": [
+    {
+      "file": "kicad-integration-test.kicad_pcb",
+      "sha256Before": "3a35c4e32efa9a90e93a643255f46eeb904d796cb26fb422e22ed1c819910a83",
+      "sha256After": "3a35c4e32efa9a90e93a643255f46eeb904d796cb26fb422e22ed1c819910a83",
+      "unchanged": true
+    },
+    {
+      "file": "kicad-integration-test.kicad_sch",
+      "sha256Before": "333985cef901a06a5317d1125e9f003cd3c6ae80471fc37f6d0867026bff919b",
+      "sha256After": "333985cef901a06a5317d1125e9f003cd3c6ae80471fc37f6d0867026bff919b",
+      "unchanged": true
+    },
+    {
+      "file": "kicad-integration-test.kicad_pro",
+      "sha256Before": "e848a95fca5665238889cd28774d4f4c9dc7559e0b191cedc56c7d13e6c3d952",
+      "sha256After": "e848a95fca5665238889cd28774d4f4c9dc7559e0b191cedc56c7d13e6c3d952",
+      "unchanged": true
+    }
+  ],
+  "copyHashes": {
+    "kicad-integration-test.kicad_pcb": "c0b768f5334e0f22d223276f01fd865484224ce62c6d4acade38cbf8604a20fa",
+    "kicad-integration-test.kicad_sch": "333985cef901a06a5317d1125e9f003cd3c6ae80471fc37f6d0867026bff919b",
+    "kicad-integration-test.kicad_pro": "e848a95fca5665238889cd28774d4f4c9dc7559e0b191cedc56c7d13e6c3d952"
+  },
+  "zip": {
+    "path": "/Users/denny/Project/codex-helper/tools/easyeda-mcp-pro-trial/compat-conversion/p2-numeric-nets-20261004/Project2-Net-Compatibility.zip",
+    "sha256": "7727108c957e90d452ba953a85e8da24e9eeeff70150c0f19f22adbda49ff1eb",
+    "threeEntriesMatchCopies": true
+  }
+}

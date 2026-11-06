@@ -1,0 +1,8 @@
+# Konnect MCP configuration for the ROCK Codex client.
+# Load every tool at startup so the initial MCP catalog is complete.
+kicad_cli = "/Applications/KiCad/KiCad.app/Contents/MacOS/kicad-cli"
+kicad_binary = "/Applications/KiCad/KiCad.app/Contents/MacOS/kicad"
+ipc_address = "ipc:///tmp/kicad/api.sock"
+transport = "stdio"
+eager_toolsets = true
+jlcpcb_db_path = "/Users/denny/.konnect/jlcpcb.db"

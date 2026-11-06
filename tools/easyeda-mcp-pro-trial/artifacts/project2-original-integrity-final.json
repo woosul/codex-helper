@@ -1,0 +1,20 @@
+[
+  {
+    "file": "kicad-integration-test.kicad_sch",
+    "originalSha256": "333985cef901a06a5317d1125e9f003cd3c6ae80471fc37f6d0867026bff919b",
+    "copySha256": "333985cef901a06a5317d1125e9f003cd3c6ae80471fc37f6d0867026bff919b",
+    "same": true
+  },
+  {
+    "file": "kicad-integration-test.kicad_pcb",
+    "originalSha256": "3a35c4e32efa9a90e93a643255f46eeb904d796cb26fb422e22ed1c819910a83",
+    "copySha256": "3a35c4e32efa9a90e93a643255f46eeb904d796cb26fb422e22ed1c819910a83",
+    "same": true
+  },
+  {
+    "file": "kicad-integration-test.kicad_pro",
+    "originalSha256": "e848a95fca5665238889cd28774d4f4c9dc7559e0b191cedc56c7d13e6c3d952",
+    "copySha256": "e848a95fca5665238889cd28774d4f4c9dc7559e0b191cedc56c7d13e6c3d952",
+    "same": true
+  }
+]

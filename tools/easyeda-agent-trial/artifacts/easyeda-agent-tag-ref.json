@@ -1,0 +1,10 @@
+{
+  "ref": "refs/tags/v0.21.7",
+  "node_id": "REF_kwDOTE0CA7FyZWZzL3RhZ3MvdjAuMjEuNw",
+  "url": "https://api.github.com/repos/zhoushoujianwork/easyeda-agent/git/refs/tags/v0.21.7",
+  "object": {
+    "sha": "148c409780ad212a5a9096f27a3f6bdbf52777f0",
+    "type": "tag",
+    "url": "https://api.github.com/repos/zhoushoujianwork/easyeda-agent/git/tags/148c409780ad212a5a9096f27a3f6bdbf52777f0"
+  }
+}

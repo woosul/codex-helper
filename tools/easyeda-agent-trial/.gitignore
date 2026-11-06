@@ -1,0 +1,9 @@
+node_modules/
+.runtime/
+/bin/easyeda
+/bin/easyeda.exe
+/*.eext
+/artifacts/*
+!/artifacts/easyeda-agent-tag-object.json
+!/artifacts/easyeda-agent-tag-ref.json
+!/artifacts/tool-catalog.json
