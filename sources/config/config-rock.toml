@@ -16,10 +16,12 @@ memories = true
 js_repl = false
 
 [mcp_servers.n8n-mcp-local]
+enabled = false
 command = "/Users/denny/Project/codex-helper/bin/codex-mcp-env"
 args = ["rock", "N8N_MCP_LOCAL_HEADER", "/Users/denny/.local/share/codex-mcp/supergateway/node_modules/.bin/supergateway", "--streamableHttp", "https://mcp-local.peaknine.io/mcp", "--header"]
 
 [mcp_servers.n8n-mcp]
+enabled = false
 command = "/Users/denny/Project/codex-helper/bin/codex-mcp-env"
 args = ["rock", "N8N_MCP_HEADER", "/Users/denny/.local/share/codex-mcp/supergateway/node_modules/.bin/supergateway", "--streamableHttp", "https://play.peaknine.io/mcp-server/http", "--header"]
 
