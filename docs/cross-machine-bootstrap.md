@@ -33,7 +33,7 @@ tags: [codex, bootstrap, cross-machine]
 
 `manifest.toml` is authoritative: `[config]` declares `sources/config/config-{host}.toml`, `config-default.toml`, the live target, and the synthetic `global-config` identity. Selection precedence is explicit `--host`, then `CODEX_HELPER_HOST`, then the lowercase short hostname. Thus `GEMS.local` selects `config-gems.toml`. A typo in an explicit option or environment variable fails closed. An unregistered implicit hostname falls back to `config-default.toml` and reports `fallback: true` in JSON plan/inventory output.
 
-Commit `sources/config/config-NAME.toml` when that machine's non-secret Codex settings should follow it across rebuilds. Host files may contain machine paths, MCP definitions, plugin choices, project trust settings, and UI preferences. v0.4.1 still requires `features.multi_agent = true`, `agents.max_threads = 4`, and `agents.max_depth = 1` on every host.
+Commit `sources/config/config-NAME.toml` when that machine's non-secret Codex settings should follow it across rebuilds. Host files may contain machine paths, MCP definitions, plugin choices, project trust settings, and UI preferences. Every host requires `agents.enabled = true`, `agents.max_threads = 4`, and `agents.max_depth = 1`; omit the deprecated `features.multi_agent` setting.
 
 The tracked GEMS config sets `model_context_window = 1000000` and `model_auto_compact_token_limit = 850000` with `scope = "total"`, so automatic compaction begins at 85% of the configured context window. The manifest records this global-config contract as asset version 1.2.0.
 

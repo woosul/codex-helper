@@ -11,7 +11,6 @@ sandbox_mode = "danger-full-access"
 approval_policy = "never"
 
 [features]
-multi_agent = true
 memories = true
 js_repl = false
 
@@ -155,6 +154,7 @@ hide_rate_limit_model_nudge = true
 "gpt-5.4" = "gpt-5.5"
 
 [agents]
+enabled = true
 max_threads = 4
 max_depth = 1
 

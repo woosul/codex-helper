@@ -188,7 +188,7 @@ codex-harness skill reset parallel-review
 
 전역 설정 대상은 런타임 `CODEX_HOME` 값과 무관하게 항상 `$HOME/.codex/config.toml`이다. 선택된 Git 원본은 백업·복구 원본으로만 쓰고 live 설정은 regular file로 복사하며, 두 번째 적용은 no-op이다. state와 snapshot은 `CODEX_HOME`별로 분리되어 runtime 적용이 전역 하네스 상태를 덮지 않는다. 호스트 변경은 plan/status에서 drift로 나타난다.
 
-호스트별 config에는 머신 경로, MCP 정의, 플러그인 선택, 프로젝트 신뢰 설정과 UI 설정을 포함할 수 있다. 모든 v0.4.1 config에는 `features.multi_agent = true`, `agents.max_threads = 4`, `agents.max_depth = 1`이 필요하다.
+호스트별 config에는 머신 경로, MCP 정의, 플러그인 선택, 프로젝트 신뢰 설정과 UI 설정을 포함할 수 있다. 모든 호스트 config에는 `agents.enabled = true`, `agents.max_threads = 4`, `agents.max_depth = 1`이 필요하다. 폐기 예정인 `features.multi_agent` 항목은 제거한다. 실행 중인 서버에 변경을 반영하려면 `/daemon`으로 재시작한다.
 
 Git config에는 비밀값만 제외한 해당 머신의 실제 설정을 둔다. n8n 인증 헤더처럼 민감한 값은 `.env-gems` 또는 `.env-rock`에 두고, Git에는 대응하는 `.example`만 남긴다. `bin/codex-mcp-env`가 호스트 파일을 읽어 MCP 프로세스에 값을 전달하며, `doctor`는 추적 TOML의 literal bearer 값을 검사한다.
 

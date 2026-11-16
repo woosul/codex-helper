@@ -1223,7 +1223,8 @@ def _config_source_has_required_settings(data: Mapping[str, Any]) -> bool:
     if not isinstance(agents, Mapping):
         return False
     return (
-        features.get("multi_agent") is True
+        "multi_agent" not in features
+        and agents.get("enabled") is True
         and isinstance(features.get("js_repl"), bool)
         and type(agents.get("max_threads")) is int
         and agents.get("max_threads") == 4

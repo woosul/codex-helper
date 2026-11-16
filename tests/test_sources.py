@@ -58,7 +58,8 @@ class SourceContractTests(unittest.TestCase):
     def test_host_configs_keep_required_multi_agent_settings(self):
         for path in (ROOT / "sources/config").glob("config-*.toml"):
             data = tomllib.loads(path.read_text())
-            self.assertTrue(data["features"]["multi_agent"])
+            self.assertNotIn("multi_agent", data["features"])
+            self.assertIs(data["agents"]["enabled"], True)
             self.assertEqual(4, data["agents"]["max_threads"])
             self.assertEqual(1, data["agents"]["max_depth"])
             for role in ("scanner", "planner", "developer", "reviewer", "verifier"):

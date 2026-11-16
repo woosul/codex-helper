@@ -1,3 +1,10 @@
+---
+title: Operations
+description: Operate and validate the Codex harness and host configuration.
+date: 2026-11-16
+tags: [codex, harness, operations]
+---
+
 # Operations
 
 ## Safe update sequence
@@ -93,7 +100,7 @@ The selected source is `sources/config/config-<host>.toml`; it is the canonical 
 
 Create a new host source atomically from the safe baseline with `codex-harness host init NAME`, review it, and commit it before applying. Machine-specific paths and choices may remain in that host file. Move credentials to the ignored `.env-NAME`, commit a redacted `.env-NAME.example`, and use `bin/codex-mcp-env` for commands that need those values. `doctor` parses every `config-*.toml` and rejects literal bearer secrets without printing values.
 
-Every v0.4.1 host config must set `features.multi_agent = true`, `agents.max_threads = 4`, and `agents.max_depth = 1`.
+Every host config must set `agents.enabled = true`, `agents.max_threads = 4`, and `agents.max_depth = 1`. Omit the deprecated `features.multi_agent` setting. After changing a running server's configuration, use `/daemon` to restart it.
 
 ## External review
 
