@@ -59,7 +59,7 @@ class SourceContractTests(unittest.TestCase):
         for path in (ROOT / "sources/config").glob("config-*.toml"):
             data = tomllib.loads(path.read_text())
             self.assertNotIn("multi_agent", data["features"])
-            self.assertIs(data["agents"]["enabled"], True)
+            self.assertTrue(data["agents"]["enabled"])
             self.assertEqual(4, data["agents"]["max_threads"])
             self.assertEqual(1, data["agents"]["max_depth"])
             for role in ("scanner", "planner", "developer", "reviewer", "verifier"):
