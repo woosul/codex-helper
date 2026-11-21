@@ -84,3 +84,20 @@ These instructions are the personal default for Codex across repositories. More 
 - Read-only inspection of the sibling Claude harness requires explicit user approval. After approval, reading, searching, and diffing are allowed within the approved scope.
 - Executing or modifying the sibling Claude harness requires separate explicit user authorization.
 - Managed Codex links must resolve inside `codex-helper`; runtime-owned Codex state remains outside Git.
+
+<!-- over9k:todo -->
+## Project to-do lists (Herdr)
+
+Agents maintain the project list using `todo`. Run `todo log` before automatic request logging. When logging is on, record actionable user requests promptly and keep existing entries current instead of creating duplicates. The CLI selects the project from the current Git repository; use `todo -p <project>` when the intended project differs.
+
+- User requests from conversation: `todo add --kind request "<request>"` (green). Plain `todo add` has the same category.
+- User-entered panel items are `manual` (purple). Preserve this origin when editing them.
+- Decisions requiring explicit user approval: `todo add --kind approval "<decision and concrete scope>"` (orange). Ask the user in the conversation. A checkbox, time elapsed, or an agent's own completion is never approval to execute the proposed action.
+- Agent follow-up or unclassified items: `todo add --kind other "<item>"` (grey). Do not represent an agent's own idea as a user request.
+- Correct a category with `todo kind <number> request|manual|approval|other`. Preserve the item's wording and origin unless the user changes the request.
+- Use `todo edit <number> "<updated text>"` when scope changes. Mark an implementation task with `todo done <number>` only after completing and verifying it. Leave partial or blocked work open.
+- For an approval item, record the user's explicit outcome (approved, denied, or cancelled) in its text, then mark the decision resolved. This does not mark the proposed implementation complete. Execute only the approved scope and track the implementation separately when needed.
+- Selected WP plans are the source for blue plan tasks. Maintain their existing TODO checkboxes and role ownership; do not duplicate every plan task into the conversational list. Preserve the plan's original language and wording. When explicitly asked to generate a missing TODO section, derive it from the plan's actual steps, deliverables and verification criteria without adding scope.
+- Preserve registration and processing timestamps. The CLI records them; never invent historical times.
+- `todo log off` / `todo log on` controls automatic request logging for that project. Explicit user requests to add an item still apply when automatic logging is off.
+<!-- /over9k:todo -->
