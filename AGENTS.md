@@ -88,7 +88,7 @@ These instructions are the personal default for Codex across repositories. More 
 <!-- over9k:todo -->
 ## Project to-do lists (Herdr)
 
-When Herdr To-do is enabled, the project list lives in `todo-herdr.md` at the root of the main Git checkout. Linked worktrees share that file. For remote work, run `todo` on the machine that owns the checkout. Use the CLI for task updates so the panel and agents share the same items, categories, and timestamps.
+When Herdr To-do is enabled, the project list lives in `todo-herdr.md` at the root of the main Git checkout. Linked worktrees share that file. Keep this machine-local task list out of version control. Add `/todo-herdr.md` to the project's root `.gitignore` when enabling Herdr To-do. For remote work, run `todo` on the machine that owns the checkout. Use the CLI for task updates so the panel and agents share the same items, categories, and timestamps.
 
 Agents maintain the project list using `todo`. Run `todo log` before automatic request logging. When logging is on, record actionable user requests promptly and keep existing entries current instead of creating duplicates. The CLI selects the project from the current Git repository; use `todo -p <project>` when the intended project differs.
 
@@ -99,6 +99,7 @@ Agents maintain the project list using `todo`. Run `todo log` before automatic r
 - Correct a category with `todo kind <number> request|manual|approval|other`. Preserve the item's wording and origin unless the user changes the request.
 - Use `todo edit <number> "<updated text>"` when scope changes. Mark an implementation task with `todo done <number>` only after completing and verifying it. Leave partial or blocked work open.
 - For an approval item, record the user's explicit outcome (approved, denied, or cancelled) in its text, then mark the decision resolved. This does not mark the proposed implementation complete. Execute only the approved scope and track the implementation separately when needed.
+- When the user decides an open approval, record the outcome and close that decision in the same turn. Before reporting completion, run `todo list` for the project and reconcile the request, its approvals and associated follow-ups against the conversation and verification results. Re-read the list after changes. Keep unrelated or unresolved items open.
 - Selected WP plans are the source for blue plan tasks. Maintain their existing TODO checkboxes and role ownership; do not duplicate every plan task into the conversational list. Preserve the plan's original language and wording. When explicitly asked to generate a missing TODO section, derive it from the plan's actual steps, deliverables and verification criteria without adding scope.
 - Preserve registration and processing timestamps. The CLI records them; never invent historical times.
 - `todo log off` / `todo log on` controls automatic request logging for that project. Explicit user requests to add an item still apply when automatic logging is off.
