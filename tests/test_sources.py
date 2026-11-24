@@ -150,11 +150,11 @@ class SourceContractTests(unittest.TestCase):
 
     def test_agent_and_profile_model_assignments(self):
         expected_agents = {
-            "scanner": ("gpt-6.1-sol", "high"),
-            "planner": ("gpt-6.1-sol", "xhigh"),
-            "developer": ("gpt-6.1-sol", "xhigh"),
-            "reviewer": ("gpt-6.1-sol", "xhigh"),
-            "verifier": ("gpt-6.1-sol", "high"),
+            "scanner": ("gpt-6.2-sol", "high"),
+            "planner": ("gpt-6.2-sol", "xhigh"),
+            "developer": ("gpt-6.2-sol", "xhigh"),
+            "reviewer": ("gpt-6.2-sol", "xhigh"),
+            "verifier": ("gpt-6.2-sol", "high"),
         }
         expected_profiles = {
             "deep-review.config": ("gpt-5.6-sol", "max"),
