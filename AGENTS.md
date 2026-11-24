@@ -88,6 +88,8 @@ These instructions are the personal default for Codex across repositories. More 
 <!-- over9k:todo -->
 ## Project to-do lists (Herdr)
 
+When Herdr To-do is enabled, the project list lives in `todo-herdr.md` at the root of the main Git checkout. Linked worktrees share that file. For remote work, run `todo` on the machine that owns the checkout. Use the CLI for task updates so the panel and agents share the same items, categories, and timestamps.
+
 Agents maintain the project list using `todo`. Run `todo log` before automatic request logging. When logging is on, record actionable user requests promptly and keep existing entries current instead of creating duplicates. The CLI selects the project from the current Git repository; use `todo -p <project>` when the intended project differs.
 
 - User requests from conversation: `todo add --kind request "<request>"` (green). Plain `todo add` has the same category.
